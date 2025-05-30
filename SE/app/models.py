@@ -41,7 +41,6 @@ class Log(models.Model):
         return cls.objects.filter(timestamp__gte=start_time, timestamp__lte=end_time)
     
 
-
 class Device(models.Model):
     Device_id = models.IntegerField(primary_key=True)
     Device_name = models.CharField(max_length=20)
@@ -55,6 +54,15 @@ class Device(models.Model):
     def change_name(self, new_name):
         Device_name = new_name
         self.save()
+
+    def add_device(self, Device_id, Device_name, Device_type, Device_user, Device_status):
+        self.Device_id = Device_id
+        self.Device_name = Device_name
+        self.Device_type = Device_type
+        self.Device_user = Device_user
+        self.Device_status = Device_status
+        self.save()
+        #各个设备的add函数都可以调用
     
 class Light(Device):
     brightness = models.IntegerField(default=100)
@@ -71,6 +79,11 @@ class Light(Device):
         self.save()
 
     def change_brightness(self, brightness):
+        self.brightness = brightness
+        self.save()
+
+    def add_light(self, Device_id, Device_name, Device_user, Device_status, brightness=50):
+        self.add_device(Device_id, Device_name, 'Light', Device_user, Device_status)
         self.brightness = brightness
         self.save()
 
@@ -105,6 +118,11 @@ class AirConditioner(Device):
         self.temperature = temperature
         self.save()
 
+    def add_airconditioner(self, Device_id, Device_name, Device_user, Device_status, temperature=25, mode='cool'):
+        self.add_device(Device_id, Device_name, 'AirConditioner', Device_user, Device_status)
+        self.temperature = temperature
+        self.mode = mode
+        self.save()
 
 class Curtain(Device):
     def __str__(self):
@@ -116,6 +134,10 @@ class Curtain(Device):
 
     def turn_off(self):
         self.Device_status = 0
+        self.save()
+
+    def add_curtain(self, Device_id, Device_name, Device_user, Device_status):
+        self.add_device(Device_id, Device_name, 'Curtain', Device_user, Device_status)
         self.save()
 
 class washingMachine(Device):
@@ -142,6 +164,11 @@ class washingMachine(Device):
         self.Device_status = 1
         self.mode = 'fastwash'
         self.save()
+    
+    def add_washingmachine(self, Device_id, Device_name, Device_user, Device_status, mode='wash'):
+        self.add_device(Device_id, Device_name, 'WashingMachine', Device_user, Device_status)
+        self.mode = mode
+        self.save()
 
 class robotvaccum(Device):
     mode = models.CharField(max_length=20, default='clean') #sweep为清扫，mop为拖地
@@ -161,4 +188,9 @@ class robotvaccum(Device):
 
     def turn_off(self):
         self.Device_status = 0
+        self.save()
+
+    def add_robotvaccum(self, Device_id, Device_name, Device_user, Device_status, mode='clean'):
+        self.add_device(Device_id, Device_name, 'RobotVaccum', Device_user, Device_status)
+        self.mode = mode
         self.save()

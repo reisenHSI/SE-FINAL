@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.auth.hashers import make_password, check_password
 # Create your models here.
 """
     用户表
@@ -9,16 +9,19 @@ class User(models.Model):
     username = models.CharField(max_length=20) # 用户名
     password = models.CharField(max_length=20) # 密码
     phone = models.CharField(max_length=20) # 电话号码
+    age = models.IntegerField(max_length=3) # 年龄
     User_id = models.IntegerField(primary_key=True) # 用户id——主键
     permission = models.fields.IntegerField(default=0) # 权限——儿童为0，成人为1，工作人员为2
 
     def __str__(self):
         return self.username
     
-    # 根据传入的用户名，返回用户
-    def get_user(self, username):
-        user = User.objects.get(username=username)
-        return user
+    # 修改密码
+    def set_password(self, new_password):
+        self.password = new_password
+
+    def check_password(self, new_password):
+        return check_password(new_password, self.password)
 
 # 日志表，存储操作日志
 class Log(models.Model):
@@ -63,11 +66,24 @@ class Device(models.Model):
     Device_id = models.IntegerField(primary_key=True) # 设备id——主键
     Device_name = models.CharField(max_length=20) # 设备名
     Device_type = models.CharField(max_length=20)  # 设备类型
-    Device_user = models.CharField(max_length=20) # 设备使用者
     Device_status = models.IntegerField(default=0) # 设备状态
 
     def __str__(self): 
         return self.Device_name
+    
+    # 打开设备
+    def turn_on(self):
+        self.Device_status = 1
+        self.save()
+
+    # 关闭设备
+    def turn_off(self):
+        self.Device_status = 0
+        self.save()
+
+    # 获取设备状态
+    def get_status(self):
+        return self.Device_status
     
     #  修改设备名
     def change_name(self, new_name):
@@ -75,11 +91,10 @@ class Device(models.Model):
         self.save()
 
     # 添加设备，接口
-    def add_device(self, Device_id, Device_name, Device_type, Device_user, Device_status):
+    def add_device(self, Device_id, Device_name, Device_type, Device_status):
         self.Device_id = Device_id
         self.Device_name = Device_name
         self.Device_type = Device_type
-        self.Device_user = Device_user
         self.Device_status = Device_status
         self.save()
         
@@ -98,25 +113,16 @@ class Light(Device):
 
     def __str__(self):
         return f"Light: {self.Device_name}"
-    
-    # 开灯
-    def turn_on(self):
-        self.Device_status = 1
-        self.save()
-
-    # 关灯
-    def turn_off(self):
-        self.Device_status = 0
-        self.save()
 
     # 修改亮度
-    def change_brightness(self, brightness):
-        self.brightness = brightness
-        self.save()
+    def set_brightness(self, brightness):
+        if brightness >= 0 and brightness <= 100:
+            self.brightness = brightness
+            self.save()
 
     # 添加设备
-    def add_light(self, Device_id, Device_name, Device_user, Device_status, brightness=50):
-        self.add_device(Device_id, Device_name, 'Light', Device_user, Device_status)
+    def add_light(self, Device_id, Device_name, Device_status=0, brightness=50):
+        self.add_device(Device_id, Device_name, 'Light', Device_status)
         self.brightness = brightness
         self.save()
 
@@ -128,39 +134,19 @@ class AirConditioner(Device):
     def __str__(self):
         return f"AirConditioner: {self.Device_name}"
 
-    # 开空调
-    def turn_on(self):
-        self.Device_status = 1
-        self.save()
-
-    # 关空调
-    def turn_off(self):
-        self.Device_status = 0
-        self.save()
-
-    # 制冷
-    def cool(self):
-        self.mode = 'cool'
-        self.save()
-
-    # 制热
-    def heat(self):
-        self.mode = 'heat'
-        self.save()
-
-    # 除湿
-    def dry(self):
-        self.mode = 'dry'
+    # 设置模式：cool,heat,dry
+    def set_mode(self, new_mode):
+        self.mode = new_mode
         self.save()
 
     # 修改温度
-    def change_temperature(self, temperature):
+    def set_temperature(self, temperature):
         self.temperature = temperature
         self.save()
 
     # 添加设备
-    def add_airconditioner(self, Device_id, Device_name, Device_user, Device_status, temperature=25, mode='cool'):
-        self.add_device(Device_id, Device_name, 'AirConditioner', Device_user, Device_status)
+    def add_airconditioner(self, Device_id, Device_name, Device_status, temperature=25, mode='cool'):
+        self.add_device(Device_id, Device_name, 'AirConditioner', Device_status)
         self.temperature = temperature
         self.mode = mode
         self.save()
@@ -170,19 +156,9 @@ class Curtain(Device):
     def __str__(self):
         return f"Curtain: {self.Device_name}"
 
-    # 拉开窗帘 
-    def turn_on(self):
-        self.Device_status = 1
-        self.save()
-
-    # 关闭窗帘
-    def turn_off(self):
-        self.Device_status = 0
-        self.save()
-
     #  添加窗帘
-    def add_curtain(self, Device_id, Device_name, Device_user, Device_status):
-        self.add_device(Device_id, Device_name, 'Curtain', Device_user, Device_status)
+    def add_curtain(self, Device_id, Device_name, Device_status):
+        self.add_device(Device_id, Device_name, 'Curtain', Device_status)
         self.save()
 
 # 洗衣机
@@ -191,38 +167,15 @@ class washingMachine(Device):
 
     def __str__(self):
         return f"WashingMachine: {self.Device_name}"
-    
-    # 开启
-    def turn_on(self):
-        self.Device_status = 1
-        self.save()
 
-    #  关闭
-    def turn_off(self):
-        self.Device_status = 0
-        self.save()
-
-    # 洗涤
-    def wash(self):
-        self.Device_status = 1
-        self.mode = 'wash'
-        self.save()
-
-    # 烘干
-    def dry(self):
-        self.Device_status = 1
-        self.mode = 'dry'
-        self.save()
-
-    # 快洗
-    def fastwash(self):
-        self.Device_status = 1
-        self.mode = 'fastwash'
+    # 设置模式：wash，dry,fastwash
+    def set_mode(self, mode):
+        self.mode = mode
         self.save()
     
     # 添加设备
-    def add_washingmachine(self, Device_id, Device_name, Device_user, Device_status, mode='wash'):
-        self.add_device(Device_id, Device_name, 'WashingMachine', Device_user, Device_status)
+    def add_washingmachine(self, Device_id, Device_name, Device_status, mode='wash'):
+        self.add_device(Device_id, Device_name, 'WashingMachine', Device_status)
         self.mode = mode
         self.save()
 
@@ -233,58 +186,41 @@ class robotvaccum(Device):
     def __str__(self):
         return f"RobotVaccum: {self.Device_name}"
     
-    # 清扫
-    def sweep(self):
-        self.Device_status = 1
-        self.mode = 'sweep'
-        self.save()
-
-    #  拖地
-    def mop(self):
-        self.Device_status = 1
-        self.mode = 'mop'
-        self.save()
-
-    # 开机
-    def turn_on(self):
-        self.Device_status = 1
-        self.save()
-
-    # 关机
-    def turn_off(self):
-        self.Device_status = 0
-        self.save()
-
-    # 添加设备
-    def add_robotvaccum(self, Device_id, Device_name, Device_user, Device_status, mode='clean'):
-        self.add_device(Device_id, Device_name, 'RobotVaccum', Device_user, Device_status)
+    # 设置模式：sweep，mop
+    def set_mode(self, mode):
         self.mode = mode
         self.save()
 
+    # 添加设备
+    def add_robotvaccum(self, Device_id, Device_name, Device_status, mode='clean'):
+        self.add_device(Device_id, Device_name, 'RobotVaccum', Device_status)
+        self.mode = mode
+        self.save()
 
 """
-    一名用户对应一条记录
-    一条记录维护该用户的常用设备
-    在view.py中实现一键开启和一键关闭逻辑
+一名用户可以对应多条记录
+一条记录维护该用户的常用设备
+在view.py中实现一键开启和一键关闭逻辑
 """
 class habits(models.Model):
+    habit_id = models.IntegerField(primary_key=True)
     username = models.CharField(max_length=20)
-    habit = models.ManyToManyField(Device) # 常用设备列表
+    favorite_devices = models.ManyToManyField(Device) # 常用设备列表
 
     def __str__(self):
         return f"{self.username}'s habit"
     
     #  用户添加习惯
     def add_favorite_device(self, device):
-        if device.Device_user not in self.habit.all():
-            self.habit.add(device)
+        if device not in self.favorite_devices.all():
+            self.favorite_devices.add(device)
 
     # 用户删除习惯
     def remove_favorite_device(self, device):
-        if device in self.habit.all():
-            self.habit.remove(device)
+        if device in self.favorite_devices.all():
+            self.favorite_devices.remove(device)
 
-    # 获取所有常用设备
-    def get_habit(self):
-        return self.habit.all()
-
+    # 获取当前habit的所有常用设备
+    def get_habits(self):
+        return self.favorite_devices.all()
+    

@@ -180,11 +180,11 @@ class washingMachine(Device):
         self.save()
 
 # 扫地机器人
-class robotvaccum(Device):
+class robotvacuum(Device):
     mode = models.CharField(max_length=20, default='clean') #sweep为清扫，mop为拖地
 
     def __str__(self):
-        return f"RobotVaccum: {self.Device_name}"
+        return f"RobotVacuum: {self.Device_name}"
     
     # 设置模式：sweep，mop
     def set_mode(self, mode):
@@ -192,8 +192,8 @@ class robotvaccum(Device):
         self.save()
 
     # 添加设备
-    def add_robotvaccum(self, Device_id, Device_name, Device_status, mode='clean'):
-        self.add_device(Device_id, Device_name, 'RobotVaccum', Device_status)
+    def add_robotvacuum(self, Device_id, Device_name, Device_status, mode='clean'):
+        self.add_device(Device_id, Device_name, 'RobotVacuum', Device_status)
         self.mode = mode
         self.save()
 

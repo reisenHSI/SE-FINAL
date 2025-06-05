@@ -20,9 +20,16 @@ from .models import *
 ·一键开启：列出常用的habits，点击选取
 """
 # Create your views here.
+
+"""
+    注册用户
+    前端传入用户名、密码、电话、年龄
+    可选择地传入“注册码”用来判断是否为工作人员(ZNJJ)(假设只有内部人员知道该注册码)
+    后端将信息进行处理，并存入数据库
+    前端返回“注册成功”，然后跳转回登陆界面
+    若用户名重复，则后端重定向到注册页面，前端提示重新输入
+"""
 def register(request):
-    # 注册用户，前端输入用户名、密码、电话，选择权限级别，然后后端确定UserId，存入数据库，返回“注册成功”，然后跳转回登陆界面
-    # 需要判断是否注册过重复用户
     if request.method == 'POST':
         # 获取前端传入的数据
         username = request.POST.get('username')
@@ -46,7 +53,7 @@ def register(request):
         # 创建新用户
         new_user = User(
             username=username,
-            password=make_password(password),  # 注意：实际应用中应使用 Django 的密码哈希功能
+            password=make_password(password),  # 对密码进行哈希加密，数据库中存储加密的密码
             phone=phone,
             User_id=User.objects.count() + 1,  # 简单地根据当前用户数量生成 User_id
             permission=permission
@@ -60,23 +67,29 @@ def register(request):
     # 如果不是 POST 请求，返回注册页面
     return HttpResponseRedirect(reverse('register'))
     
+"""
+    用户登录
+    前端传入用户名和密码
+    若无该用户则返回“该用户不存在”
+    若密码错误则返回“密码错误，请重新再试”
+    登录成功返回登陆成功，并跳转到管理界面（home）
+"""
 def login(request):
-    # 前端输入用户名和密码，如果无该用户，返回“该用户不存在”，如果密码不匹配，返回“密码错误”，如果注册成功则跳转到管理界面
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
         try:
             user = User.objects.get(username=username)
-            if check_password(password,user.password):
+            if check_password(password,user.password): # 使用哈希密码进行验证
                 request.session['username'] = username  # 将用户名保存到会话中
                 request.session['is_authenticated'] = True
+                messages.success(request, '登录成功')
                 return redirect('home')  # 重定向到 home 页面
             else:
                 messages.error(request, '密码错误')
         except User.DoesNotExist:
             messages.error(request, '用户不存在')
     return render(request, 'login.html')
-# 注册和登录都进行了哈希加密
 
 
 #每个前端网页要用到的函数，最好加上这个，防止未登录就可以跳转
@@ -86,79 +99,73 @@ def login(request):
         return redirect('login')  # 重定向到登录页面
 '''
 
+"""
+    退出登录
+    前端在home中设计“退出登录”按钮，点击后退出登录，然后跳转到登录界面
+"""
 def logout(request):
     # 注销登陆，然后返回首页
     if request.session.get('is_authenticated'):
         request.session.flush()  # 清除所有会话信息
         messages.success(request, '您已成功注销！')
     return redirect('login')  # 重定向到登录页面
-    pass
 
-def verify_old_password(request):
-    # 前端进入修改密码的界面后，首先输入用户名和旧密码，然后后端验证密码是否正确，如果正确才会跳转到下一个界面，输入新密码，然后后端会将用户的密码修改为现在输入的这个新的密码
-    # 这个函数是修改密码的第一个界面，需要对用户名和旧密码进行验证
+"""
+    修改密码
+    前端从登录页面进入修改密码页面
+    前端需要提供4个方框，对应用户名、密码、新密码、确认新密码，并传到后端
+    后端将会依次验证用户名、旧密码和确认的新密码
+    若用户名不存在，则前端在方框下提示“用户名不存在，请重新再试”
+    若旧密码错误，则前端在方框下提示“旧密码错误，请重新输入”
+    若新密码和确认新密码不一致，则前端在方框下提示“新密码和确认新密码不一致，请重新输入”
+    若上述三步骤均验证成功，后端保存，并跳转到登录页
+    error_filed表示错误的字段
+"""
+def change_password(request):
     if request.method == 'POST':
-        # 获取前端传入的用户名和旧密码
+        # 从前端获取所有必要信息
         username = request.POST.get('username')
         old_password = request.POST.get('old_password')
-        
-        try:
-            # 根据用户名获取用户对象
-            user = User.objects.get(username=username)
-            
-            # 使用 check_password 验证旧密码
-            if check_password(old_password, user.password):
-                # 如果旧密码匹配，将用户名保存到会话中，以便下一步使用
-                request.session['username'] = username
-                return redirect('set_new_password')  # 重定向到设置新密码页面
-            else:
-                # 如果旧密码不匹配，返回错误信息
-                messages.error(request, '密码错误')
-        except User.DoesNotExist:
-            # 如果用户不存在，返回错误信息
-            messages.error(request, '用户不存在')
-    
-    # 如果不是 POST 请求，或者验证失败，返回验证旧密码页面
-    return render(request, 'verify_old_password.html')
-
-def change_password(request):
-    # 前端输入新密码（两次），如果密码不一致，返回错误，如果修改成功则返回“密码修改成功”，然后跳转到首页    
-    if request.method == 'POST':
-        # 获取前端传入的新密码
         new_password = request.POST.get('new_password')
         confirm_new_password = request.POST.get('confirm_new_password')
         
-        # 获取会话中的用户名
-        username = request.session.get('username')
-        
-        if not username:
-            messages.error(request, '请先验证旧密码')
-            return redirect('verify_old_password')
-        
-        if new_password != confirm_new_password:
-            messages.error(request, '新密码和确认新密码不一致')
-            return render(request, 'set_new_password.html')
-        
+        # 验证用户名是否存在
         try:
-            # 根据用户名获取用户对象
             user = User.objects.get(username=username)
-            
-            # 使用 make_password 对新密码进行哈希处理并更新
-            user.password = make_password(new_password)
-            user.save()
-            
-            # 清除会话中的用户名
-            del request.session['username']
-            
-            # 返回密码修改成功信息并重定向到首页
-            messages.success(request, '密码修改成功')
-            return redirect('login')  
         except User.DoesNotExist:
-            messages.error(request, '用户不存在')
+            messages.error(request, '用户名不存在，请重新再试')
+            return render(request, 'change_password.html', {'error_field': 'username'})
+        
+        # 验证旧密码是否正确
+        if not user.check_password(old_password):
+            messages.error(request, '旧密码错误，请重新输入')
+            return render(request, 'change_password.html', {
+                'username': username,
+                'error_field': 'old_password'
+            })
+        
+        # 验证新密码和确认密码是否一致
+        if new_password != confirm_new_password:
+            messages.error(request, '新密码和确认新密码不一致，请重新输入')
+            return render(request, 'change_password.html', {
+                'username': username,
+                'error_field': 'confirm_new_password'
+            })
+        
+        # set_password会自动进行哈希处理
+        user.set_password(new_password)
+        user.save()
+        
+        # 密码修改成功，跳转到登录页面
+        messages.success(request, '密码修改成功，请重新登录')
+        return redirect('login')
     
-    # 如果不是 POST 请求，或者设置失败，返回设置新密码页面
-    return render(request, 'set_new_password.html')
+    # GET请求时返回修改密码页面
+    return render(request, 'change_password.html')
     
+"""
+    to do
+"""
 def home(request):
     # 登陆进去之后的主界面，显示所有的设备
     if not request.session.get('is_authenticated'):

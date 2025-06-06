@@ -50,23 +50,24 @@ class Log(models.Model):
         return Log.objects.get(Log_id=Log_id)
     
     # 通过用户名查询日志
+    # 确保降序排序，即日志由近到远
     def query_Log_by_username(self, username):
-        return Log.objects.filter(username=username)
+        return Log.objects.filter(username=username).order_by('-timestamp')
     
     # 通过设备名查询日志
     def query_Log_by_devicename(self, devicename):
-        return Log.objects.filter(devicename=devicename)
+        return Log.objects.filter(devicename=devicename).order_by('-timestamp')
     
      # 通过时间戳查询日志
     @classmethod
     def query_Log_by_time_range(cls, start_time, end_time):
-        return cls.objects.filter(timestamp__gte=start_time, timestamp__lte=end_time)
+        return cls.objects.filter(timestamp__gte=start_time, timestamp__lte=end_time).order_by('-timestamp')
     
 class Device(models.Model):
     Device_id = models.IntegerField(primary_key=True) # 设备id——主键
-    Device_name = models.CharField(max_length=20) # 设备名
+    Device_name = models.CharField(max_length=20, unique=True) # 设备名
     Device_type = models.CharField(max_length=20)  # 设备类型
-    Device_status = models.IntegerField(default=0) # 设备状态
+    Device_status = models.IntegerField(default=0) # 设备状态,0——关闭，1——打开、2——维护
 
     def __str__(self): 
         return self.Device_name
@@ -91,7 +92,7 @@ class Device(models.Model):
         self.save()
 
     # 添加设备，接口
-    def add_device(self, Device_id, Device_name, Device_type, Device_status):
+    def add_device(self, Device_id, Device_name, Device_type, Device_status=0):
         self.Device_id = Device_id
         self.Device_name = Device_name
         self.Device_type = Device_type

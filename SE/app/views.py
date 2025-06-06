@@ -381,11 +381,11 @@ def turn_on(request):
             curtain.turn_on()
             curtain.save()
         elif device.Device_type == 'WashingMachine':
-            washing_machine = washingMachine.objects.get(Device_name=device_name)
+            washing_machine = WashingMachine.objects.get(Device_name=device_name)
             washing_machine.turn_on()
             washing_machine.save()
         elif device.Device_type == 'RobotVacuum':
-            robot_vacuum = robotvacuum.objects.get(Device_name=device_name)
+            robot_vacuum = Robotvacuum.objects.get(Device_name=device_name)
             robot_vacuum.turn_on()
             robot_vacuum.save()
     
@@ -401,45 +401,196 @@ def turn_on(request):
     messages.success(request, f'{device.Device_name} 已打开')
     return redirect('devices')
 
-def turn_off():
-    pass
+"""
+    设备操作之后，加入日志（设备名、设备类型、操作、用户、时间）
+"""
+def turn_off(request):
+    if not request.session.get('is_authenticated'):
+        messages.error(request, '请先登录！')
+        return redirect('login')  # 重定向到登录页面
+    current_user_permission = request.session.get('permission')
 
-def set_brightness():
-    pass
+    device_name = request.POST.get('device_name')
+    username = request.session.get('username')
+    device = Device.objects.get(Device_name=device_name)
 
-def cool():
-    pass
+    if device.Device_type == 'Light':
+        # 灯不需要权限检查
+        light = Light.objects.get(Device_name=device_name)
+        light.turn_off()
+        light.save()
+    elif device.Device_type in ['AirConditioner', 'Curtain', 'WashingMachine', 'RobotVacuum']:
+        # 其他设备需要权限至少为1
+        if current_user_permission < 1:
+            messages.error(request, '您没有权限关闭此设备')
+            return redirect('devices')  # 重定向到设备列表页面
+        
+        if device.Device_type == 'AirConditioner':
+            air_conditioner = AirConditioner.objects.get(Device_name=device_name)
+            air_conditioner.turn_off()
+            air_conditioner.save()
+        elif device.Device_type == 'Curtain':
+            curtain = Curtain.objects.get(Device_name=device_name)
+            curtain.turn_off()
+            curtain.save()
+        elif device.Device_type == 'WashingMachine':
+            washing_machine = WashingMachine.objects.get(Device_name=device_name)
+            washing_machine.turn_off()
+            washing_machine.save()
+        elif device.Device_type == 'RobotVacuum':
+            robot_vacuum = Robotvacuum.objects.get(Device_name=device_name)
+            robot_vacuum.turn_off()
+            robot_vacuum.save()
+    
+    # 创建日志
+    Log.objects.create(
+        username=username,
+        devicename=device.Device_name,
+        devicetype=device.Device_type,
+        operation='turn off'
+    )
 
-def heat():
-    pass
+    # 返回操作成功信息并重定向到设备列表页面
+    messages.success(request, f'{device.Device_name} 已关闭')
+    return redirect('devices')
 
-def wet():
-    pass
+"""
+    设备操作之后，加入日志（设备名、设备类型、操作、用户、时间）
+    然后相比turnon和turnoff，需要多传入brightness
+"""
+def set_brightness(request):
+    if not request.session.get('is_authenticated'):
+        messages.error(request, '请先登录！')
+        return redirect('login')  # 重定向到登录页面
+    current_user_permission = request.session.get('permission')
+    
+    # 根据设备ID获取设备对象
+    device_name = request.POST.get('device_name')
+    brightness = request.POST.get('brightness')
+    username = request.session.get('username')
+    device = Device.objects.get(Device_name=device_name)
+    light = Light.objects.get(Device_name=device_name)
+    light.set_brightness(brightness)
+    light.save()
+    Log.objects.create(
+        username=username,
+        devicename=device.Device_name,
+        devicetype=device.Device_type,
+        operation='set brightness: f{brightness}'
+    )
+    
+    # 返回操作成功信息并重定向到设备列表页面
+    messages.success(request, f'{device.Device_name} 已调整亮度')
+    return redirect('devices')
 
-def change_temperature():
-    pass
+"""
+    设备操作之后，加入日志（设备名、设备类型、操作、用户、时间）
+    然后相比turnon和turnoff，需要多传入mode
+"""
+def aircondition_set_mode(request):
+    if not request.session.get('is_authenticated'):
+        messages.error(request, '请先登录！')
+        return redirect('login')  # 重定向到登录页面
+    current_user_permission = request.session.get('permission')
+    if current_user_permission < 1:
+        messages.error(request, '您没有权限修改此设备')
+        return redirect('devices')
+    # 根据设备ID获取设备对象
+    device_name = request.POST.get('device_name')
+    mode = request.POST.get('mode')
+    username = request.session.get('username')
+    device = Device.objects.get(Device_name=device_name)
+    airconditioner = AirConditioner.objects.get(Device_name=device_name)
+    airconditioner.set_mode(mode)
+    airconditioner.save()
+    Log.objects.create(
+        username=username,
+        devicename=device.Device_name,
+        devicetype=device.Device_type,
+        operation='set mode: f{mode}'
+    )
 
-def wash():
-    pass
+    # 返回操作成功信息并重定向到设备列表页面
+    messages.success(request, f'{device.Device_name} 已修改模式')
+    return redirect('devices')
 
-def dry():
-    pass
+def aircondition_set_temperature(request):
+    if not request.session.get('is_authenticated'):
+        messages.error(request, '请先登录！')
+        return redirect('login')  # 重定向到登录页面
+    current_user_permission = request.session.get('permission')
+    if current_user_permission < 1:
+        messages.error(request, '您没有权限修改此设备')
+        return redirect('devices')
+    device_name = request.POST.get('device_name')
+    temperature = request.POST.get('temperature').int()
+    username = request.session.get('username')
+    device = Device.objects.get(Device_name=device_name)
+    airconditioner = AirConditioner.objects.get(Device_name=device_name)
+    airconditioner.set_temperature(temperature)
+    airconditioner.save()
+    Log.objects.create(
+        username=username,
+        devicename=device.Device_name,
+        devicetype=device.Device_type,
+        operation='set temperature: f{temperature}'
+    )
+    
+    # 返回操作成功信息并重定向到设备列表页面
+    messages.success(request, f'{device.Device_name} 已修改温度')
+    return redirect('devices')
 
-def fastwash():
-    pass
+def washing_set_mode(request):
+    if not request.session.get('is_authenticated'):
+        messages.error(request, '请先登录！')
+        return redirect('login')  # 重定向到登录页面
+    current_user_permission = request.session.get('permission')
+    if current_user_permission < 1:
+        messages.error(request, '您没有权限修改此设备')
+        return redirect('devices')
+    device_name = request.POST.get('device_name')
+    mode = request.POST.get('mode')
+    username = request.session.get('username')
+    device = Device.objects.get(Device_name=device_name)
+    washingMachine = WashingMachine.objects.get(Device_name=device_name)
+    washingMachine.set_mode(mode)
+    washingMachine.save()
+    Log.objects.create(
+        username=username,
+        devicename=device.Device_name,
+        devicetype=device.Device_type,
+        operation='set mode: f{mode}'
+    )
+    
+    # 返回操作成功信息并重定向到设备列表页面
+    messages.success(request, f'{device.Device_name} 已修改模式')
+    return redirect('devices')
 
-def sweep():
-    pass
-
-def mop():
-    pass
-
-def open():
-    pass
-
-def close():
-    pass
-# 这些函数也需要判断用户权限级，儿童只能开关灯和窗帘，其他都没有权限
+def RobotVacuum_set_mode(request):
+    if not request.session.get('is_authenticated'):
+        messages.error(request, '请先登录！')
+        return redirect('login')  # 重定向到登录页面
+    current_user_permission = request.session.get('permission')
+    if current_user_permission < 1:
+        messages.error(request, '您没有权限修改此设备')
+        return redirect('devices')
+    device_name = request.POST.get('device_name')
+    mode = request.POST.get('mode')
+    username = request.session.get('username')
+    device = Device.objects.get(Device_name=device_name)
+    robotvacuum = Robotvacuum.objects(Device_name = device_name)
+    robotvacuum.set_mode(mode)
+    robotvacuum.save()
+    Log.objects.create(
+        username=username,
+        devicename=device.Device_name,
+        devicetype=device.Device_type,
+        operation='set mode: f{mode}'
+    )
+    
+    # 返回操作成功信息并重定向到设备列表页面
+    messages.success(request, f'{device.Device_name} 已修改模式')
+    return redirect('devices')
 
 def change_name():
     pass

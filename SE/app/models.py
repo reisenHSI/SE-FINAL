@@ -163,7 +163,7 @@ class Curtain(Device):
         self.save()
 
 # 洗衣机
-class washingMachine(Device):
+class WashingMachine(Device):
     mode = models.CharField(max_length=20, default='wash') #wash为洗涤，dry为烘干,fastwash为快速洗涤
 
     def __str__(self):
@@ -181,7 +181,7 @@ class washingMachine(Device):
         self.save()
 
 # 扫地机器人
-class robotvacuum(Device):
+class Robotvacuum(Device):
     mode = models.CharField(max_length=20, default='clean') #sweep为清扫，mop为拖地
 
     def __str__(self):

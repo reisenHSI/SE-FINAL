@@ -177,6 +177,16 @@ def home(request):
     if not request.session.get('is_authenticated'):
         messages.error(request, '请先登录！')
         return redirect('login')  # 重定向到登录页面
+
+    # 获取当前用户的权限
+    current_user_permission = request.session.get('permission')
+
+    # 根据用户权限显示不同的按钮
+    context = {
+        'permission': current_user_permission
+    }
+
+    return render(request, 'home.html', context)
     # # 查询所有设备
     # devices = Device.objects.all()
     
@@ -208,6 +218,33 @@ def home(request):
     点击“删除设备”，则跳转到delete_device页面，用户通过选中设备,传入设备列表
     以上操作均在权限为2（工作人员）的用户下才能进行（后端）
 """
+
+'''
+    这个是devices主界面，会显示所有的设备（分类），然后开关设备等等都在这里实现
+'''
+def devices(request):
+    if not request.session.get('is_authenticated'):
+        messages.error(request, '请先登录！')
+        return redirect('login')  # 重定向到登录页面
+    # 查询所有设备
+    devices = Device.objects.all()
+    
+    # 按设备类型分组
+    devices_by_type = {}
+    for device in devices:
+        device_type = device.Device_type
+        if device_type not in devices_by_type:
+            devices_by_type[device_type] = []
+        devices_by_type[device_type].append(device)
+    
+    # 将分组后的设备信息传递到模板
+    context = {
+        'devices_by_type': devices_by_type
+    }
+    
+    # 渲染主界面模板
+    return render(request, 'home.html', context)
+
 def add_device(request):
     # 添加设备界面，需要输入下方2个信息，然后device_type可以写成一个可选择的列表，
     if not request.session.get('is_authenticated'):

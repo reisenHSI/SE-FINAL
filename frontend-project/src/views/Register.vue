@@ -2,14 +2,18 @@
   <div class="container">
     <div class="register-card">
       <h2 class="title">注册账号</h2>
-      <form @submit.prevent="handleRegister">
+      <form @submit.prevent="register">
         <div class="form-group">
           <label for="username">用户名</label>
           <input v-model="username" type="text" id="username" required />
         </div>
         <div class="form-group">
-          <label for="email">邮箱</label>
-          <input v-model="email" type="email" id="email" required />
+          <label for="password">电话</label>
+          <input v-model="phone" type="text" id="phone" required />
+        </div>
+        <div class="form-group">
+          <label for="password">年龄</label>
+          <input v-model="age" type="number" id="age" required />
         </div>
         <div class="form-group">
           <label for="password">密码</label>
@@ -19,6 +23,7 @@
           <label for="confirmPassword">确认密码</label>
           <input v-model="confirmPassword" type="password" id="confirmPassword" required />
         </div>
+
         <button type="submit" class="register-button">注册</button>
       </form>
     </div>
@@ -26,6 +31,9 @@
 </template>
 
 <script>
+import axios from "axios";
+import {API_BASE_URL} from "../main";
+
 export default {
   name: 'Register',
   data() {
@@ -33,18 +41,36 @@ export default {
       username: '',
       email: '',
       password: '',
-      confirmPassword: ''
+      confirmPassword: '',
+      errorMessage: "",
+      phone: "",
+      age: 0,
+      isSubmitting: false
     }
   },
   methods: {
-    handleRegister() {
-      if (this.password !== this.confirmPassword) {
-        alert('两次输入的密码不一致');
-        return;
-      }
+    async register() {
+      this.isSubmitting = true;
+      this.errorMessage = "";
 
-      // 模拟注册成功
-      alert(`注册成功，欢迎你：${this.username}`);
+      try {
+        const response = await axios.post(`${API_BASE_URL}register/`, {
+          phone: this.phone,
+          username: this.username,
+          password: this.password,
+          age: this.age,
+        });
+
+        // 处理返回的信息
+        if (response) {
+
+        }
+      } catch (error) {
+        console.error("Register error:", error);
+        this.errorMessage = error.response.data.message || "注册时发生错误，请稍后再试。";
+      } finally {
+        this.isSubmitting = false;  // 提交完毕
+      }
     }
   }
 }

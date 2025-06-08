@@ -1,8 +1,8 @@
 <template>
   <div class="container">
     <div class="login-card">
-      <h2 class="title">登录账号</h2>
-      <form @submit.prevent="handleLogin">
+      <h2 class="title">登录</h2>
+      <form @submit.prevent="login">
         <div class="form-group">
           <label for="username">用户名</label>
           <input v-model="username" type="text" id="username" required />
@@ -13,26 +13,56 @@
         </div>
         <button type="submit" class="login-button">登录</button>
       </form>
+
+      <div class="register-hint">
+        还未有账号？
+        <span class="register-link" @click="goToRegister">注册</span>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+
+import axios from "axios";
+import {API_BASE_URL} from "../main";
+
 export default {
   name: 'Login',
   data() {
     return {
       username: '',
-      password: ''
+      password: '',
+      isLogin: false,
+      errorMessage: '',
     }
   },
   methods: {
-    handleLogin() {
-      if (this.username === 'admin' && this.password === '123456') {
-        alert('登录成功！');
-      } else {
-        alert('用户名或密码错误');
+    async login() {
+      this.isLogin = false;
+      this.errorMessage = '';
+
+      try {
+        const response = await axios.post(`${API_BASE_URL}login/`, {
+          username: this.username,
+          password: this.password
+        },{withCredentials:true,});
+
+        // 处理请求返回的信息
+        if (response) {
+
+        }
+
+      } catch (error) {
+        console.error('登陆失败:', error);
+        this.errorMessage = error.response.data.message || '未知错误';
+      } finally {
+        this.isLogin = false;
       }
+    },
+
+    goToRegister() {
+      this.$router.push('/register');
     }
   }
 }

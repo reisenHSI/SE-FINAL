@@ -12,7 +12,14 @@ model.py大致框架已实现
 后端：
 注册、登录、登出等逻辑大致不变
 日志查询大致不变
-devices和后续跳转逻辑修改较多
+
+devices和后续跳转逻辑修改较多:
+· devices列出所有设备信息
+·点击设备后依据设备类型跳转到对应html（light、curtain、washingMachine等）
+
+habits更改：
+·habits列出用户的所有习惯
+·提供按钮跳转到增加和删除
 
 
 

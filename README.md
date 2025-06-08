@@ -10,19 +10,13 @@ model.py大致框架已实现
 完善了“页面跳转逻辑.png”
 
 后端：
-注册、登录、登出等逻辑大致不变
-日志查询大致不变
+views.py中每一个函数对应页面跳转的一个方框
 
-devices和后续跳转逻辑修改较多:
-· devices列出所有设备信息
-·点击设备后依据设备类型跳转到对应html（light、curtain、washingMachine等）
+所有视图函数（views.py）传入和返回格式均为Json格式
 
-habits更改：
-·habits列出用户的所有习惯
-·提供按钮跳转到增加和删除
+后端返回的Json数据中绑定了status状态码，表示错误类型
 
-
-
+完成urls的配置，与页面跳转相对应
 
 
 前端：
@@ -33,6 +27,8 @@ habits更改：
 其他逻辑功能待完善
 
 to do:
+
+请参考views.py和urls.py中添加/删除/修改前端的文件
 
 登录和注册的post返回信息的处理
 

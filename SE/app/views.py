@@ -1,12 +1,8 @@
-from django.shortcuts import render
-from django.contrib import messages
-from django.shortcuts import render,redirect
 from django.http import HttpResponseRedirect, JsonResponse
-from django.urls import reverse
 from django.db.models import Max
 from django.utils import timezone
 from .models import *
-import time
+import json
 
 """
 前端需要实现的界面：
@@ -34,49 +30,72 @@ import time
     前端传入用户名、密码、电话、年龄
     可选择地传入“注册码”用来判断是否为工作人员(ZNJJ)(假设只有内部人员知道该注册码)
     后端将信息进行处理，并存入数据库
-    前端返回“注册成功”，然后跳转回登陆界面
-    若用户名重复，则抛出消息，后端重定向到注册页面，前端提示重新输入
+    若注册成功，则后端提供：成功状态、注册成功信息和用户信息
+    若失败，则依据情况抛出各种错误信息
 """
-
 def register(request):
     if request.method == 'POST':
-        # 获取前端传入的数据
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        phone = request.POST.get('phone')
-        age = request.POST.get('age')
-        registration_code = request.POST.get('registration_code', '')  # 注册码可以为空
+        try:
+            data = json.loads(request.body) if request.body else {}
+            username = data.get('username')
+            password = data.get('password')
+            phone = data.get('phone')
+            age = data.get('age')
+            registration_code = data.get('registration_code', '')  # 注册码可以为空
 
-        # 检查用户名是否已存在
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "用户名已存在")
-            return HttpResponseRedirect(reverse('register'))  # 重定向到注册页面
+            # 检查必填字段是否为空
+            if not all([username, password, phone, age]):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '所有字段都是必填的'
+                }, status=400)
+            
+            # 检查用户是否已存在
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '用户名已存在'
+                }, status=400)
+            
+            if registration_code == 'ZNJJ':  # 注册码匹配
+                permission = 2  # 工作人员
+            elif int(age) >= 18:
+                permission = 1  # 成人
+            else:
+                permission = 0  # 儿童
 
-        if registration_code == 'ZNJJ':  # 注册码匹配
-            permission = 2  # 工作人员
-        elif int(age) >= 18:
-            permission = 1  # 成人
-        else:
-            permission = 0  # 儿童
+            # 创建新用户
+            new_user = User(
+                username=username,
+                password=make_password(password),
+                phone=phone,
+                User_id=User.objects.count() + 1,
+                permission=permission
+            )
+            new_user.save()
 
-        # 创建新用户
-        new_user = User(
-            username=username,
-            password=make_password(password),  # 对密码进行哈希加密，数据库中存储加密的密码
-            phone=phone,
-            User_id=User.objects.count() + 1,  # 简单地根据当前用户数量生成 User_id
-            permission=permission
-        )
-        new_user.save()
-
-        # 返回注册成功信息并重定向到登录页面
-        messages.success(request, "注册成功")
-        return HttpResponseRedirect(reverse('login'))  # 重定向到登录页面
-
-    # 如果不是 POST 请求，返回注册页面
-    else:
-        return render(request, 'register.html')
+            # 返回注册成功响应
+            return JsonResponse({
+                'status': 'success',
+                'message': '注册成功',
+                'user': {
+                    'username': username,
+                    'phone': phone,
+                    'permission': permission
+                }
+            }, status=201)
+        
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'注册失败：{str(e)}'
+            }, status=500)
     
+    # 若不是POST请求，返回空响应，前端处理页面渲染
+    return JsonResponse({})
+
+
+
 """
     用户登录
     前端传入用户名和密码
@@ -86,36 +105,89 @@ def register(request):
 """
 def login(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
         try:
-            # 判断用户是否存在
-            user = User.objects.get(username=username)
-            if check_password(password,user.password): # 使用哈希密码进行验证
-                request.session['username'] = username  # 将用户名保存到会话中
-                request.session['is_authenticated'] = True
-                request.session['permission'] = user.permission
-                messages.success(request, '登录成功') # 存在，登录成功
-                return redirect('home')  # 重定向到 home 页面
-            else:
-                # 密码错误，抛出错误信息
-                messages.error(request, '密码错误')
-        except User.DoesNotExist:
-            # 用户不存在，抛出错误信息
-            messages.error(request, '用户不存在')
-    return render(request, 'login.html')
+            # 获取前端传入的JSON数据
+            data = json.loads(request.body) if request.body else {}
+            username = data.get('username')
+            password = data.get('password')
 
+            # 验证必填字段
+            if not username or not password:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '用户名和密码不能为空'
+                }, status=400)
+
+            try:
+                user = User.objects.get(username=username)
+                
+                if check_password(password, user.password):
+                    # 设置session
+                    request.session['username'] = username
+                    request.session['is_authenticated'] = True
+                    request.session['permission'] = user.permission
+                    
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': '登录成功',
+                        'user': {
+                            'username': username,
+                            'permission': user.permission
+                        }
+                    })
+                else:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '密码错误'
+                    }, status=400)
+                    
+            except User.DoesNotExist:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '用户不存在'
+                }, status=404)
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': '无效的JSON数据'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'登录失败: {str(e)}'
+            }, status=500)
+
+    # GET请求返回空响应（前端处理页面渲染）
+    return JsonResponse({})
 
 """
     退出登录
     前端在home中设计“退出登录”按钮，点击后退出登录，然后跳转到登录界面
 """
 def logout(request):
-    # 注销登陆，然后返回首页
-    if request.session.get('is_authenticated'):
-        request.session.flush()  # 清除所有会话信息
-        messages.success(request, '您已成功注销！')
-    return redirect('login')  # 重定向到登录页面
+    if request.method == 'POST':
+        try:
+            if request.session.get('is_authenticated'):
+                request.session.flush()  # 清除所有会话信息
+                return JsonResponse({
+                    'status': 'success',
+                    'message': '您已成功退出登录！'
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '您尚未登录'
+                }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'注销失败: {str(e)}'
+            }, status=500)
+    
+    # GET请求返回空响应（前端处理页面渲染）
+    return JsonResponse({})
+    
 
 """
     修改密码
@@ -125,1127 +197,1593 @@ def logout(request):
     若用户名不存在，则前端在方框下提示“用户名不存在，请重新再试”
     若旧密码错误，则前端在方框下提示“旧密码错误，请重新输入”
     若新密码和确认新密码不一致，则前端在方框下提示“新密码和确认新密码不一致，请重新输入”
-    若上述三步骤均验证成功，后端保存，并跳转到登录页
-    error_filed表示错误的字段
+    若上述三步骤均验证成功，后端保存，status变为成功，抛出成功信息
+    若错误，则依据不同情况抛出错误信息，status为false
 """
 def change_password(request):
     if request.method == 'POST':
-        # 从前端获取所有必要信息
-        username = request.POST.get('username')
-        old_password = request.POST.get('old_password')
-        new_password = request.POST.get('new_password')
-        confirm_new_password = request.POST.get('confirm_new_password')
-        
-        # 验证用户名是否存在
         try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            # 用户名不存在
-            messages.error(request, '用户名不存在，请重新再试')
-            return render(request, 'change_password.html', {'error_field': 'username'})
-        
-        # 验证旧密码是否正确
-        if not user.check_password(old_password):
-            # 旧密码错误
-            messages.error(request, '旧密码错误，请重新输入')
-            return render(request, 'change_password.html', {
-                'username': username,
-                'error_field': 'old_password'
+            # 获取前端传入的JSON数据
+            data = json.loads(request.body) if request.body else {}
+            username = data.get('username')
+            old_password = data.get('old_password')
+            new_password = data.get('new_password')
+            confirm_new_password = data.get('confirm_new_password')
+
+            # 验证必填字段
+            if not all([username, old_password, new_password, confirm_new_password]):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '所有字段都是必填的',
+                    'error_field': 'all'
+                }, status=400)
+
+            # 验证用户名是否存在
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '用户不存在，请重新再试',
+                    'error_field': 'username'
+                }, status=404)
+
+            # 验证旧密码是否正确
+            if not user.check_password(old_password):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '旧密码错误，请重新输入',
+                    'error_field': 'old_password'
+                }, status=400)
+
+            # 验证新密码和确认密码是否一致
+            if new_password != confirm_new_password:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '新密码和确认新密码不一致，请重新输入',
+                    'error_field': 'confirm_new_password'
+                }, status=400)
+
+            # 更新密码
+            user.set_password(new_password)
+            user.save()
+
+            # 返回成功响应
+            return JsonResponse({
+                'status': 'success',
+                'message': '密码修改成功，请重新登录'
             })
-        
-        # 验证新密码和确认密码是否一致
-        if new_password != confirm_new_password:
-            # 新密码和确认密码不一致
-            messages.error(request, '新密码和确认新密码不一致，请重新输入')
-            return render(request, 'change_password.html', {
-                'username': username,
-                'error_field': 'confirm_new_password'
-            })
-        
-        # set_password会自动进行哈希处理
-        user.set_password(new_password)
-        user.save()
-        
-        # 密码修改成功，跳转到登录页面
-        messages.success(request, '密码修改成功，请重新登录')
-        return redirect('login')
-    
-    # GET请求时返回修改密码页面
-    return render(request, 'change_password.html')
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': '无效的JSON数据',
+                'error_field': 'all'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'密码修改失败: {str(e)}',
+                'error_field': 'all'
+            }, status=500)
+
+    # GET请求返回空响应（前端处理页面渲染）
+    return JsonResponse({})
     
 """
     主页面
     提供4个跳转和退出登录按钮，不需要具体的逻辑实现
+    若为登录，则status为error，并提供重定向路径
+    若成功，则status为sucess，并提供用户名、权限、跳转选择（5个选项）等信息
 """
 def home(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-
-    return render(request, 'home.html')
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'  # 提供前端跳转路径
+        }, status=401)
+    
+    # 返回主页所需的基本信息
+    return JsonResponse({
+        'status': 'success',
+        'data': {
+            'username': request.session.get('username'),
+            'permission': request.session.get('permission'),
+            'menu_options': [
+                {'name': '设备管理', 'url': '/home/devices/'},
+                {'name': '设备增删', 'url': '/home/add_delete/'},
+                {'name': '日志查询', 'url': '/home/query_logs/'},
+                {'name': '一键习惯', 'url': '/home/habits/'},
+                {'name': '退出登录', 'url': '/logout/'}
+            ]
+        }
+    })
 
 """
     从home.html跳转到该页面
     该页面提供“添加设备”和“删除设备”两个按钮，分别跳转到add_device和delete_device页面
+    若未登录，则status为error，并提供重定向路径（login）
+    # 若权限不足，则status为error，并提供重定向路径（home）
+    若成功，则status为success，并返回页面所需数据（用户名、跳转选项等）
 """
 def add_delete(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-
-    return render(request, 'add_delete.html')
-
-"""
-    以下两个函数是添加和删除设备逻辑
-    在home页面提供一个设备管理的选项
-    通过“设备管理”选项进入add_delete页面，可以选择添加或删除
-    点击“添加设备”，则跳转到add_device页面，用户需要传入设备名，并通过选项框选择设备类型
-    点击“删除设备”，则跳转到delete_device页面，用户通过选中设备,传入设备列表
-    以上操作均在权限为2（工作人员）的用户下才能进行（后端）
-"""
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'  # 提供前端跳转路径
+        }, status=401)
+    
+    # # 检查用户权限（假设只有工作人员可以访问）
+    # if request.session.get('permission') != 2:
+    #     return JsonResponse({
+    #         'status': 'error',
+    #         'message': '您没有权限访问此页面',
+    #         'redirect': '/home/'
+    #     }, status=403)
+    
+    # 返回页面所需数据
+    return JsonResponse({
+        'status': 'success',
+        'data': {
+            'page_title': '设备管理',
+            'options': [
+                {
+                    'name': '添加设备',
+                    'url': '/home/add_delete/add_device/',
+                    'description': '添加新设备到系统'
+                },
+                {
+                    'name': '删除设备',
+                    'url': '/home/add_delete/delete_device/',
+                    'description': '从系统中移除设备'
+                }
+            ],
+            'username': request.session.get('username')
+        }
+    })
 
 """
     add_device.html
-    第一次进入时，后端提供所有设备
-    用户添加设备时，前端提供输入的设备名、设备类型
-    后端执行添加操作，并返回所有设备
-    device_type可能需要通过选择传入（而不是文本输入），便于统一
+    前端传入设备名和设备类型
+    若未登录，则status为error，提供重定向路径（login）
+    若权限不足，则status为error，提供重定向路径（add_delete）
+    若设备已存在，则status为error，抛出错误信息
+    若设备类型错误（为严格按照5个类进行填写），则status为error
+    添加成功则status为success
+    GET请求会返回所有设备的信息
 """
-
 def add_device(request):
-    # 添加设备界面，需要输入下方2个信息，然后device_type可以写成一个可选择的列表，
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
     
-    current_user_permission = request.session.get('permission')
-    # 检查当前用户的权限级别是否为2（工作人员）
-    if current_user_permission != 2:
-        messages.error(request, '您没有权限删除设备')
-        return redirect('add_delete')
+    # 验证权限
+    if request.session.get('permission') != 2:
+        return JsonResponse({
+            'status': 'error',
+            'message': '您没有权限添加设备',
+            'redirect': '/home/add_delete/'
+        }, status=403)
     
     if request.method == 'POST':
-        # 获取前端传入的设备信息
-        username = request.session.get('username')
-        device_name = request.POST.get('device_name')
-        device_type = request.POST.get('device_type')
-        
-        # 创建新设备
-        # 获取最大ID，不能直接使用count+1.否则删除时可能会发生竞争
-        max_id = Device.objects.aggregate(max_id=Max('Device_id'))['max_id'] or 0
-        # 先在Device中创建记录
-        new_device = Device(
-            Device_id=max_id + 1,
-            Device_name=device_name,
-            Device_type=device_type
-        )
-        # 在派生类中创建记录
-        if device_type == 'Light':
-            new_device = Light.objects.create(Device_id=max_id + 1, 
-                                            Device_name=device_name, 
-                                            Device_type=device_type)
-        elif device_type == 'WashingMachine':
-            new_device = WashingMachine.objects.create(Device_id=max_id + 1, 
-                                            Device_name=device_name, 
-                                            Device_type=device_type)
-        elif  device_type == 'Robotvacuum':
-            new_device = Robotvacuum.objects.create(Device_id=max_id + 1, 
-                                            Device_name=device_name, 
-                                            Device_type=device_type)
-        elif device_type == 'AirConditioner':
-            new_device = AirConditioner.objects.create(Device_id=max_id + 1, 
-                                            Device_name=device_name, 
-                                            Device_type=device_type)
-        elif device_type == 'Curtain':
-            new_device = Curtain.objects.create(Device_id=max_id + 1, 
-                                            Device_name=device_name, 
-                                            Device_type=device_type)
-        new_device.save()
-        
-        current_time = timezone.now()
-        Log.objects.create(
-            username=username,
-            devicename=device_name,
-            devicetype=device_type,
-            operation='add',
-            timestamp = current_time
-        )
-        
-        # 返回添加成功信息并重定向到主界面
-        messages.success(request, '设备添加成功')
-        return redirect('add_device')
-    
-    devices = Device.objects.all()
-    context = {'devices': devices,
-               'username': username}
-    
-    # 如果不是 POST 请求，返回添加设备页面
-    return render(request, 'add_device.html', context)
+        try:
+            # 解析JSON数据
+            data = json.loads(request.body)
+            device_name = data.get('device_name')
+            device_type = data.get('device_type')
+            username = request.session.get('username')
 
-"""
-    delete_device.html
-    第一次进入时，提供所有设备列表
-    用户选择设备进行删除（列表，可以多个设备）
-    删除成功后，返回删除成功信息，并返回所有设备列表
-"""
-def delete_device(request):
-    # 点击这个删除设备的按钮，会显示出所有的设备，然后勾选这个设备，点击确认，然后就可以把这个设备删除
-    if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    current_user_permission = request.session.get('permission')
-    # 检查当前用户的权限级别是否为2（工作人员）
-    if current_user_permission != 2:
-        messages.error(request, '您没有权限删除设备')
-        return redirect('add_delete')
-    
-    if request.method == 'POST':
-        # 获取前端传入的设备名列表
-        username = request.session.get('username')
-        device_names = request.POST.getlist('device_name')
-        
-        # 删除选中的设备
-        for device_name in device_names:
-            device = Device.objects.get(Device_name=device_name)
-            device.delete()
+            # 验证必填字段
+            if not all([device_name, device_type]):
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '设备名称和类型不能为空'
+                }, status=400)
+
+            # 检查设备是否已存在
+            if Device.objects.filter(Device_name=device_name).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '设备名称已存在'
+                }, status=400)
+
+            # 获取最大ID
+            max_id = Device.objects.aggregate(max_id=Max('Device_id'))['max_id'] or 0
+            
+            # 创建设备记录
+            device_data = {
+                'Device_id': max_id + 1,
+                'Device_name': device_name,
+                'Device_type': device_type
+            }
+
+            # 根据设备类型创建具体设备
+            device_models = {
+                'Light': Light,
+                'WashingMachine': WashingMachine,
+                'Robotvacuum': Robotvacuum,
+                'AirConditioner': AirConditioner,
+                'Curtain': Curtain
+            }
+
+            if device_type in device_models:
+                new_device = device_models[device_type].objects.create(**device_data)
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '无效的设备类型'
+                }, status=400)
+
+            # 记录日志
             Log.objects.create(
                 username=username,
                 devicename=device_name,
-                devicetype=Device.objects.get(Device_name=device_name).Device_type,
-                operation='delete'
+                devicetype=device_type,
+                operation='add',
+                timestamp=timezone.now()
             )
-        # 返回删除成功信息并重定向到主界面
-        messages.success(request, '设备删除成功')
-        return redirect('delete_device')
+
+            # 返回成功响应
+            return JsonResponse({
+                'status': 'success',
+                'message': '设备添加成功',
+                'device': {
+                    'id': new_device.Device_id,
+                    'name': new_device.Device_name,
+                    'type': new_device.Device_type
+                }
+            })
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': '无效的JSON数据'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'添加设备失败: {str(e)}'
+            }, status=500)
+
+    # GET请求返回设备类型选项和现有设备列表
+    device_types = ['Light', 'WashingMachine', 'Robotvacuum', 'AirConditioner', 'Curtain']
+    devices = list(Device.objects.values('Device_id', 'Device_name', 'Device_type'))
     
-    # 如果不是 POST 请求，显示所有设备供用户选择
-    # device包含设备id、设备名、设备类型、设备状态
-    devices = Device.objects.all()
-    context = {
-        'devices': devices
-    }
-    return render(request, 'delete_device.html', context)
+    return JsonResponse({
+        'status': 'success',
+        'device_types': device_types,
+        'devices': devices,
+        'username': request.session.get('username')
+    })
 
 """
-    查询日志
-    默认提供所有日志信息，在前端页面展示最新的几条日志（已按时间由近到远排序）
-    提供过滤器，可以根据[用户名、设备名、时间戳]进行筛选
-    前端需要传入username\devicename\start_time\end_time(POST)
-    可以动态筛选，前端传入的条件默认为None，用户操作后传入对应条件
-    使用AJAX 请求 + JSON 响应，前端实现无页面跳转
-    后端返回JSON数据，表示所有日志信息（筛选则返回部分）
+    delete_device.html
+    未登录，则status为error，抛出错误信息，提供重定向
+    权限不足，则status为error，抛出错误信息，提供重定向
+    未选择删除的设备，status为error，提供错误信息
+    删除成功，status为success，后端分别提供被删除的设备和仍存在的设备
+    GET请求返回所有设备,status为success
 """
-def query_Log(request):
-    # 验证是否登录
+def delete_device(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
     
-    # 获取用户信息
-    username = request.session.get('username')
-    user = User.objects.get(username=username)
-    current_user_permission = user.permission
+    # 验证权限
+    if request.session.get('permission') != 2:
+        return JsonResponse({
+            'status': 'error',
+            'message': '您没有权限删除设备',
+            'redirect': '/add_delete/'
+        }, status=403)
     
-    # 无权限查看，返回空页面，抛出错误信息
-    if current_user_permission < 1:
-        messages.error(request, "您没有权限查看此信息")
-        time.sleep(1)
-        return redirect('home')
-    
-    # 获取筛选条件
     if request.method == 'POST':
-        target_username = request.POST.get('username')
-        target_devicename = request.POST.get('devicename')
-        start_time = request.POST.get('start_time')
-        end_time = request.POST.get('end_time')
-
-    logs = Log.objects.all().order_by('-timestamp')
-
-    # 根据传入参数进行过滤
-    if target_username:
-        logs = logs.filter(username=target_username)
-    if target_devicename:
-        logs = logs.filter(devicename=target_devicename)
-    if start_time and end_time:
-        logs = logs.filter(timestamp__range=[start_time, end_time])
-
-    log_data = []
-    for log in logs:
-        log_data.append({
-            'device_name': log.devicename, # 设备名称
-            'device_type': log.devicetype, # 设备类型
-            'operation': log.operation, # 操作
-            'username': log.username, # 使用者
-            'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S') # 时间戳
-        })
+        try:
+            # 解析JSON数据
+            data = json.loads(request.body)
+            device_ids = data.get('device_ids', [])  # 改为使用设备ID列表
+            username = request.session.get('username')
+            
+            if not device_ids:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请选择要删除的设备'
+                }, status=400)
+            
+            deleted_devices = []
+            for device_id in device_ids:
+                try:
+                    device = Device.objects.get(Device_id=device_id)
+                    device_name = device.Device_name
+                    device_type = device.Device_type
+                    
+                    # 删除设备
+                    device.delete()
+                    
+                    # 记录日志
+                    Log.objects.create(
+                        username=username,
+                        devicename=device_name,
+                        devicetype=device_type,
+                        operation='delete',
+                        timestamp=timezone.now()
+                    )
+                    
+                    deleted_devices.append({
+                        'id': device_id,
+                        'name': device_name,
+                        'type': device_type
+                    })
+                    
+                except Device.DoesNotExist:
+                    continue
+            
+            # 返回成功响应
+            return JsonResponse({
+                'status': 'success',
+                'message': f'成功删除 {len(deleted_devices)} 个设备',
+                'deleted_devices': deleted_devices,
+                'remaining_devices': list(Device.objects.values('Device_id', 'Device_name', 'Device_type'))
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': '无效的JSON数据'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'删除设备失败: {str(e)}'
+            }, status=500)
     
-    # 返回JSON响应
-    context = {'logs': log_data}
-    return render(request, 'query_logs.html', context)
-    # return JsonResponse({'logs': log_data})
+    # GET请求返回所有设备列表
+    devices = list(Device.objects.values('Device_id', 'Device_name', 'Device_type'))
+    return JsonResponse({
+        'status': 'success',
+        'devices': devices,
+        'username': request.session.get('username')
+    })
+
+"""
+    查询日志query_logs
+    若未登录，则status为error，提供错误信息和重定向
+    若权限不足，则status为error，提供错误信息和重定向
+    若查询成功，则会提供由近到远的日志信息（依据条件筛选，若条件为空则返回所有信息）
+"""
+def query_logs(request):
+    # 验证登录状态
+    if not request.session.get('is_authenticated'):
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
+    
+    # 验证权限
+    if request.session.get('permission') < 1:
+        return JsonResponse({
+            'status': 'error',
+            'message': '您没有权限查看此信息',
+            'redirect': '/home/'
+        }, status=403)
+    
+    try:
+        # 初始化查询集
+        logs = Log.objects.all().order_by('-timestamp')
+        
+        # 处理筛选条件
+        if request.method == 'POST':
+            data = json.loads(request.body) if request.body else {}
+            
+            # 获取筛选参数
+            filters = {
+                'username': data.get('username'),
+                'devicename': data.get('devicename'),
+                'start_time': data.get('start_time'),
+                'end_time': data.get('end_time')
+            }
+            
+            # 应用筛选条件
+            if filters['username']:
+                logs = logs.filter(username__icontains=filters['username'])
+            if filters['devicename']:
+                logs = logs.filter(devicename__icontains=filters['devicename'])
+            if filters['start_time'] and filters['end_time']:
+                logs = logs.filter(timestamp__range=[filters['start_time'], filters['end_time']])
+        
+        # 构建响应数据
+        log_data = []
+        for log in logs:
+            log_data.append({
+                'id': log.Log_id,
+                'username': log.username,
+                'device_name': log.devicename,
+                'device_type': log.devicetype,
+                'operation': log.operation,
+                'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'formatted_operation': f"{log.username} {log.operation} {log.devicename}({log.devicetype})"
+            })
+        
+        # 添加分页信息
+        total_count = logs.count()
+        
+        return JsonResponse({
+            'status': 'success',
+            'logs': log_data, # 日志数据
+            'total_count': total_count, # 总记录数
+            'filter_options': {
+                'usernames': list(Log.objects.order_by().values_list('username', flat=True).distinct()),
+                'devicenames': list(Log.objects.order_by().values_list('devicename', flat=True).distinct())
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'查询日志失败: {str(e)}'
+        }, status=500)
 
 '''
     devices主页面
-    按类别显示所有设备（前端可以考虑按类别可视化为图标+设备名？）
-    后端提供所有已分类的设备（一个包含5个列表的列表）
-    前端点击设备的图标，需要根据设备名跳转到对应的设备类型
-    （light, curtain, robotvacuum, airconditioner, washingmachine）
-    后端传出的context拥有device的所有信息，前端可以据此进行跳转和后续传输请求
+    所有设备按照类别进行分类，并提供跳转路径、设备类别、设备图标名称
+    图标名称、跳转路径可能需要修改
 '''
 def devices(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    # 查询所有设备
-    devices = Device.objects.all()
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
     
-    # 按设备类型分组
-    devices_by_type = {}
-    for device in devices:
-        device_type = device.Device_type
-        if device_type not in devices_by_type:
-            devices_by_type[device_type] = []
-        devices_by_type[device_type].append(device)
-    
-    # 将分组后的设备信息传递到模板
-    context = {
-        'devices_by_type': devices_by_type
-    }
-    
-    # 渲染主界面模板
-    return render(request, 'devices.html', context)
+    try:
+        # 查询所有设备并按类型分组
+        devices = Device.objects.all()
+        
+        # 定义设备类型映射
+        device_type_mapping = {
+            'Light': {
+                'name': '灯光设备',
+                'icon': 'lightbulb',
+                'endpoint': '/api/light/'
+            },
+            'AirConditioner': {
+                'name': '空调设备',
+                'icon': 'ac-unit',
+                'endpoint': '/api/airConditioner/'
+            },
+            'Curtain': {
+                'name': '窗帘设备',
+                'icon': 'curtains',
+                'endpoint': '/api/curtain/'
+            },
+            'WashingMachine': {
+                'name': '洗衣设备',
+                'icon': 'local_laundry_service',
+                'endpoint': '/api/washingMachine/'
+            },
+            'Robotvacuum': {
+                'name': '扫地机器人',
+                'icon': 'cleaning_services',
+                'endpoint': '/api/robotvacuum/'
+            }
+        }
+        
+        # 按类型分组设备
+        grouped_devices = {}
+        for device in devices:
+            device_type = device.Device_type
+            if device_type not in grouped_devices:
+                grouped_devices[device_type] = {
+                    'type_info': device_type_mapping.get(device_type, {
+                        'name': device_type,
+                        'icon': 'devices',
+                        'endpoint': f'/api/{device_type.lower()}/'
+                    }),
+                    'devices': []
+                }
+            
+            grouped_devices[device_type]['devices'].append({
+                'id': device.Device_id,
+                'name': device.Device_name,
+                'status': device.get_status() if hasattr(device, 'get_status') else None,
+                'endpoint': f"/api/{device_type.lower()}/"
+            })
+        
+        # 转换为前端需要的数组格式
+        device_categories = [
+            {
+                'type': device_type,
+                'type_name': info['type_info']['name'],
+                'icon': info['type_info']['icon'],
+                'endpoint': info['type_info']['endpoint'],
+                'devices': info['devices']
+            } 
+            for device_type, info in grouped_devices.items()
+        ]
+        
+        return JsonResponse({
+            'status': 'success',
+            'device_categories': device_categories,
+            'username': request.session.get('username'),
+            'permission': request.session.get('permission')
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'获取设备列表失败: {str(e)}'
+        }, status=500)
 
 
 """
     light.html对应的逻辑
-    前端需要传入设备名称（用户在devices页面点击的设备）
-    前端选择性提供设备修改的状态（new_status、new_brightness、new_name）
-    设备状态包括：开关、亮度、新名称
-    后端中，当用户第一次进入light.html时，会将数据库中该设备的状态提供给前端进行展示
-    当用户修改设备状态时，后端处理这些请求，之后返回最新的设备状态给前端
+    未登录，status为error，提供错误信息和重定向
+    未提供设备名称时，status为error，提供错误信息
+    若已登录且满足各种条件，则修改数据库信息，然后同GET请求
+    GET请求时，提供设备当前的各种状态信息
 """
 def light(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    username = request.session.get('username')
-    device_name = request.POST.get('device_name')
-    light = Light.objects.get(Device_name=device_name)
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    if request.method == 'POST':
-        # 检查亮度合法
-        if 'new_brightness' in request.POST:
-            new_brightness = request.POST.get('new_brightness')
-            if new_brightness < 0 or new_brightness > 100:
-                messages.error(request, '亮度值必须在0到100之间！')
-                return redirect('light')
-        
-        if 'new_status' in request.POST:
-            new_status = request.POST.get('new_status')
-            light.set_status(new_status) # 0表示关闭，1表示打开
-            messages.success(request, '操作成功！')
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="light",
-                operation='turn on' if new_status == '1' else 'turn off'
-            )
-        if 'new_brightness' in request.POST:
-            new_brightness = request.POST.get('new_brightness')
-            light.set_brightness(new_brightness)
-            messages.success(request, f"亮度已修改为{new_brightness}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="light",
-                operation=f"set brightness to {new_brightness}"
-            )
-        if 'new_name' in request.POST:
-            new_name = request.POST.get('new_name')
-            light.set_name(new_name)
-            messages.success(request, f"设备名已修改为{new_name}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="light",
-                operation=f"set device_name to {new_name}"
-            )
-        # light.save()
-        return redirect(reverse('light'))
+    try:
+        # 获取设备名称
+        if request.method == 'GET':
+            device_name = request.GET.get('device_name')
+        else:
+            data = json.loads(request.body) if request.body else {}
+            device_name = data.get('device_name')
 
-    context = {
-        'status': light.get_status(),
-        'brightness': light.get_brightness(),
-        'name': light.get_name()
-    }
-    return render(request, 'light.html', context)
+        if not device_name:
+            return JsonResponse({
+                'status': 'error',
+                'message': '缺少设备名称参数'
+            }, status=400)
+
+        # 获取设备对象
+        light = Light.objects.get(Device_name=device_name)
+        username = request.session.get('username')
+
+        # 处理POST请求（设备控制）
+        if request.method == 'POST':
+            # 初始化响应数据
+            response_data = {
+                'status': 'success',
+                'message': '操作成功',
+                'device': {
+                    'name': light.Device_name,
+                    'type': light.Device_type
+                },
+                'changes': {}
+            }
+
+            # 处理状态变更
+            if 'new_status' in data:
+                new_status = data['new_status']
+                if new_status not in ['0', '1']:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '无效的状态值'
+                    }, status=400)
+                
+                light.set_status(new_status)
+                response_data['changes']['status'] = new_status
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="light",
+                    operation='turn on' if new_status == '1' else 'turn off'
+                )
+
+            # 处理亮度变更
+            if 'new_brightness' in data:
+                new_brightness = int(data['new_brightness'])
+                if not 0 <= new_brightness <= 100:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '亮度值必须在0到100之间'
+                    }, status=400)
+                
+                light.set_brightness(new_brightness)
+                response_data['changes']['brightness'] = new_brightness
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="light",
+                    operation=f"set brightness to {new_brightness}"
+                )
+
+            # 处理名称变更
+            if 'new_name' in data:
+                new_name = data['new_name'].strip()
+                if not new_name:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '设备名称不能为空'
+                    }, status=400)
+                
+                old_name = light.Device_name
+                light.set_name(new_name)
+                response_data['changes']['name'] = new_name
+                response_data['device']['name'] = new_name
+                Log.objects.create(
+                    username=username,
+                    devicename=old_name,
+                    devicetype="light",
+                    operation=f"rename to {new_name}"
+                )
+
+            # 如果没有实际修改
+            if not response_data['changes']:
+                response_data['message'] = '未检测到有效修改'
+
+            return JsonResponse(response_data)
+
+        # GET请求返回设备当前状态
+        return JsonResponse({
+            'status': 'success',
+            'device': {
+                'id': light.Device_id,
+                'name': light.Device_name,
+                'type': light.Device_type,
+                'status': light.get_status(),
+                'brightness': light.get_brightness(),
+                'controls': {
+                    'can_change_status': True,
+                    'can_adjust_brightness': True,
+                    'can_rename': request.session.get('permission', 0) >= 1
+                }
+            }
+        })
+
+    except Light.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': '设备不存在'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'操作失败: {str(e)}'
+        }, status=500)
         
 """
-    airConditioner.html对应的逻辑:参考空调遥控器？
-    前端需要传入设备名称（用户在devices页面点击的设备）
-    前端选择性提供设备修改的状态（new_status、new_temperature、new_mode、new_name）
-    设备状态包括：开关、温度、模式、新名称
-    后端中，当用户第一次进入airCondotioner.html时，会将数据库中该设备的状态提供给前端进行展示
-    当用户修改设备状态时，后端处理这些请求，之后返回最新的设备状态给前端
+    airConditioner.html
+    逻辑与light基本一致，注意mode
+    返回设备名、状态、温度、模式等等信息
+    GET请求返回当前设备的各种信息
 """
 def airConditioner(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    username = request.session.get('username')
-    device_name = request.POST.get('device_name')
-    airConditioner = AirConditioner.objects.get(Device_name=device_name)
-    
-    if request.method == 'POST':
-        if 'new_status' in request.POST:
-            new_status = request.POST.get('new_status')
-            airConditioner.set_status(new_status) # 0表示关闭，1表示打开
-            messages.success(request, '操作成功！')
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="airConditioner",
-                operation='turn on' if new_status == '1' else 'turn off'
-            )
-        if 'new_temperature' in request.POST:
-            new_temperature = request.POST.get('new_temperature')
-            airConditioner.set_temperature(new_temperature)
-            messages.success(request, f"亮度已修改为{new_temperature}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="airConditioner",
-                operation=f"set temperature to {new_temperature}"
-            )
-        if 'new_mode' in request.POST:
-            new_mode = request.POST.get('new_mode')
-            airConditioner.set_mode(new_mode)
-            messages.success(request, f"模式已修改为{new_mode}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="airConditioner",
-                operation=f"set mode to {new_mode}"
-            )
-        if 'new_name' in request.POST:
-            new_name = request.POST.get('new_name')
-            airConditioner.set_name(new_name)
-            messages.success(request, f"设备名已修改为{new_name}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="airConditioner",
-                operation=f"change name to {new_name}"
-            )
-        # airConditioner.save()
-        return redirect(reverse('airConditioner'))
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    context = {
-        'status': airConditioner.get_status(),
-        'temperature': airConditioner.get_temperature(),
-        'mode': airConditioner.get_mode(),
-        'name': airConditioner.get_name()
-    }
-    return render(request, 'airConditioner.html', context)
+    try:
+        # 获取设备名称
+        if request.method == 'GET':
+            device_name = request.GET.get('device_name')
+        else:
+            data = json.loads(request.body) if request.body else {}
+            device_name = data.get('device_name')
+
+        if not device_name:
+            return JsonResponse({
+                'status': 'error',
+                'message': '缺少设备名称参数'
+            }, status=400)
+
+        # 获取设备对象
+        ac = AirConditioner.objects.get(Device_name=device_name)
+        username = request.session.get('username')
+        permission = request.session.get('permission', 0)
+
+        # 处理POST请求（设备控制）
+        if request.method == 'POST':
+            response_data = {
+                'status': 'success',
+                'message': '操作成功',
+                'device': {
+                    'name': ac.Device_name,
+                    'type': ac.Device_type
+                },
+                'changes': {}
+            }
+
+            # 验证和设置温度（16-30度）
+            if 'new_temperature' in data:
+                new_temp = int(data['new_temperature'])
+                if not 16 <= new_temp <= 30:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '温度必须介于16-30度之间'
+                    }, status=400)
+                
+                ac.set_temperature(new_temp)
+                response_data['changes']['temperature'] = new_temp
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="airConditioner",
+                    operation=f"set temperature to {new_temp}"
+                )
+
+            # 验证和设置模式（cool/heat/auto）
+            if 'new_mode' in data:
+                valid_modes = ['cool', 'heat', 'auto', 'dry', 'fan']
+                new_mode = data['new_mode']
+                if new_mode not in valid_modes:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'无效的模式，必须是: {", ".join(valid_modes)}'
+                    }, status=400)
+                
+                ac.set_mode(new_mode)
+                response_data['changes']['mode'] = new_mode
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="airConditioner",
+                    operation=f"set mode to {new_mode}"
+                )
+
+            # 设置开关状态
+            if 'new_status' in data:
+                new_status = data['new_status']
+                if new_status not in ['0', '1']:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '无效的状态值'
+                    }, status=400)
+                
+                ac.set_status(new_status)
+                response_data['changes']['status'] = new_status
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="airConditioner",
+                    operation='turn on' if new_status == '1' else 'turn off'
+                )
+
+            # 修改设备名称（需要权限）
+            if 'new_name' in data:
+                if permission < 1:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '您没有权限修改设备名称'
+                    }, status=403)
+                
+                new_name = data['new_name'].strip()
+                if not new_name:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '设备名称不能为空'
+                    }, status=400)
+                
+                old_name = ac.Device_name
+                ac.set_name(new_name)
+                response_data['changes']['name'] = new_name
+                response_data['device']['name'] = new_name
+                Log.objects.create(
+                    username=username,
+                    devicename=old_name,
+                    devicetype="airConditioner",
+                    operation=f"rename to {new_name}"
+                )
+
+            return JsonResponse(response_data)
+
+        # GET请求返回设备当前状态
+        return JsonResponse({
+            'status': 'success',
+            'device': {
+                'id': ac.Device_id,
+                'name': ac.Device_name,
+                'type': ac.Device_type,
+                'status': ac.get_status(),
+                'temperature': ac.get_temperature(),
+                'mode': ac.get_mode(),
+                'valid_modes': ['cool', 'heat', 'dry'],
+                'min_temp': 16,
+                'max_temp': 30,
+                'controls': {
+                    'can_change_status': True,
+                    'can_adjust_temp': True,
+                    'can_change_mode': True,
+                    'can_rename': permission >= 1
+                }
+            }
+        })
+
+    except AirConditioner.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': '空调设备不存在'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'操作失败: {str(e)}'
+        }, status=500)
 
 """
     curtain.html对应的逻辑
-    前端需要传入设备名称（用户在devices页面点击的设备）
-    前端选择性提供设备修改的状态（new_status、new_name）
-    设备状态包括：开关、亮度、新名称
-    后端中，当用户第一次进入curtain.html时，会将数据库中该设备的状态提供给前端进行展示
-    当用户修改设备状态时，后端处理这些请求，之后返回最新的设备状态给前端
+    逻辑基本与light一致，比light少了brightness
+    若失败，status为error，提供各种错误信息
+    若成功，status为success，返回当前窗帘的状态
 """
 def curtain(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    username = request.session.get('username')
-    device_name = request.POST.get('device_name')
-    curtain = Curtain.objects.get(Device_name=device_name)
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    if request.method == 'POST':
-        if 'new_status' in request.POST:
-            new_status = request.POST.get('new_status')
-            curtain.set_status(new_name) # 0表示关闭，1表示打开
-            messages.success(request, '操作成功！')
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="curtain",
-                operation='turn on' if new_status == '1' else 'turn off'
-            )
-        if 'new_name' in request.POST:
-            new_name = request.POST.get('new_name')
-            curtain.set_name(new_name)
-            messages.success(request, f"设备名已修改为{new_name}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="curtain",
-                operation=f"set name to {new_name}"
-            )
-        # curtain.save()
-        return redirect(reverse('curtain'))
+    try:
+        # 获取设备名称
+        if request.method == 'GET':
+            device_name = request.GET.get('device_name')
+        else:
+            data = json.loads(request.body) if request.body else {}
+            device_name = data.get('device_name')
 
-    context = {
-        'status': curtain.get_status(),
-        'name': curtain.get_name()
-    }
-    return render(request, 'curtain.html', context)
+        if not device_name:
+            return JsonResponse({
+                'status': 'error',
+                'message': '缺少设备名称参数'
+            }, status=400)
+
+        # 获取设备对象
+        curtain = Curtain.objects.get(Device_name=device_name)
+        username = request.session.get('username')
+        permission = request.session.get('permission', 0)
+
+        # 处理POST请求（设备控制）
+        if request.method == 'POST':
+            response_data = {
+                'status': 'success',
+                'message': '操作成功',
+                'device': {
+                    'name': curtain.Device_name,
+                    'type': curtain.Device_type
+                },
+                'changes': {}
+            }
+
+            # 设置开关状态
+            if 'new_status' in data:
+                new_status = data['new_status']
+                if new_status not in ['0', '1']:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '无效的状态值（0表示关闭，1表示打开）'
+                    }, status=400)
+                
+                curtain.set_status(new_status)
+                response_data['changes']['status'] = new_status
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="curtain",
+                    operation='打开' if new_status == '1' else '关闭'
+                )
+
+            # 修改设备名称（需要权限）
+            if 'new_name' in data:
+                if permission < 1:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '您没有权限修改设备名称'
+                    }, status=403)
+                
+                new_name = data['new_name'].strip()
+                if not new_name:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '设备名称不能为空'
+                    }, status=400)
+                
+                old_name = curtain.Device_name
+                curtain.set_name(new_name)
+                response_data['changes']['name'] = new_name
+                response_data['device']['name'] = new_name
+                Log.objects.create(
+                    username=username,
+                    devicename=old_name,
+                    devicetype="curtain",
+                    operation=f"重命名为 {new_name}"
+                )
+
+            return JsonResponse(response_data)
+
+        # GET请求返回设备当前状态
+        return JsonResponse({
+            'status': 'success',
+            'device': {
+                'id': curtain.Device_id,
+                'name': curtain.Device_name,
+                'type': curtain.Device_type,
+                'status': curtain.get_status(),
+                'controls': {
+                    'can_operate': True,
+                    'can_rename': permission >= 1
+                }
+            }
+        })
+
+    except Curtain.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': '窗帘设备不存在'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'操作失败: {str(e)}'
+        }, status=500)
 
 """
     washingMachine.html对应的逻辑
-    前端需要传入设备名称（用户在devices页面点击的设备）
-    前端选择性提供设备修改的状态（new_status、new_mode、new_name）
-    设备状态包括：开关、模式、新名称
-    后端中，当用户第一次进入washingMachine.html时，会将数据库中该设备的状态提供给前端进行展示
-    当用户修改设备状态时，后端处理这些请求，之后返回最新的设备状态给前端
+    逻辑基本与light一致（注意mode）
+    若失败则status为error，提供各种错误信息
+    若成功则status为success，并提供当前设备的当前状态信息
+    GET请求返回当前设备的各种状态信息
 """
-
 def washingMachine(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    username = request.session.get('username')
-    device_name = request.POST.get('device_name')
-    washingMachine = WashingMachine.objects.get(Device_name=device_name)
-    permission = request.session.get('permission')
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    if request.method == 'POST':
-        # 检查用户权限
-        if permission < 1:
-            messages.error(request, '无权限操作！')
-            return redirect('washingMachine')
-        
-        if 'new_status' in request.POST:
-            new_status = request.POST.get('new_status')
-            washingMachine.set_status(new_status) # 0表示关闭，1表示打开
-            messages.success(request, '操作成功！')
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="washingMachine",
-                operation='turn on' if new_status == '1' else 'turn off'
-            )
-        if 'new_mode' in request.POST:
-            new_mode = request.POST.get('new_mode')
-            washingMachine.set_mode(new_mode)
-            messages.success(request, f"模式已修改为{new_mode}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="washingMachine",
-                operation=f"set mode to {new_mode}"
-            )
-        if 'new_name' in request.POST:
-            new_name = request.POST.get('new_name')
-            washingMachine.set_name(new_name)
-            messages.success(request, f"设备名已修改为{new_name}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="washingMachine",
-                operation=f"set name to {new_name}"
-            )
-        # washingMachine.save()
-        return redirect(reverse('washingMachine'))
+    try:
+        # 获取设备名称
+        if request.method == 'GET':
+            device_name = request.GET.get('device_name')
+        else:
+            data = json.loads(request.body) if request.body else {}
+            device_name = data.get('device_name')
 
-    context = {
-        'status': washingMachine.get_status(),
-        'mode': washingMachine.get_mode(),
-        'name': washingMachine.get_name()
-    }
-    return render(request, 'washingMachine.html', context)
+        if not device_name:
+            return JsonResponse({
+                'status': 'error',
+                'message': '缺少设备名称参数'
+            }, status=400)
+
+        # 获取设备对象
+        wm = WashingMachine.objects.get(Device_name=device_name)
+        username = request.session.get('username')
+        permission = request.session.get('permission', 0)
+
+        # 处理POST请求（设备控制）
+        if request.method == 'POST':
+            response_data = {
+                'status': 'success',
+                'message': '操作成功',
+                'device': {
+                    'name': wm.Device_name,
+                    'type': wm.Device_type
+                },
+                'changes': {}
+            }
+
+            # 检查用户权限
+            if permission < 1:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '您没有权限操作洗衣机设备',
+                    'redirect': '/home/devices/'
+                }, status=403)
+
+            # 设置开关状态
+            if 'new_status' in data:
+                new_status = data['new_status']
+                if new_status not in ['0', '1']:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '无效的状态值（0表示关闭，1表示打开）'
+                    }, status=400)
+                
+                wm.set_status(new_status)
+                response_data['changes']['status'] = new_status
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="washingMachine",
+                    operation='启动' if new_status == '1' else '停止'
+                )
+
+            # 设置洗衣模式
+            if 'new_mode' in data:
+                valid_modes = ['standard', 'quick', 'delicate', 'heavy', 'wool']
+                new_mode = data['new_mode']
+                if new_mode not in valid_modes:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'无效的洗衣模式，可选: {", ".join(valid_modes)}'
+                    }, status=400)
+                
+                wm.set_mode(new_mode)
+                response_data['changes']['mode'] = new_mode
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="washingMachine",
+                    operation=f"设置为 {new_mode} 模式"
+                )
+
+            # 修改设备名称
+            if 'new_name' in data:
+                new_name = data['new_name'].strip()
+                if not new_name:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '设备名称不能为空'
+                    }, status=400)
+                
+                old_name = wm.Device_name
+                wm.set_name(new_name)
+                response_data['changes']['name'] = new_name
+                response_data['device']['name'] = new_name
+                Log.objects.create(
+                    username=username,
+                    devicename=old_name,
+                    devicetype="washingMachine",
+                    operation=f"重命名为 {new_name}"
+                )
+
+            return JsonResponse(response_data)
+
+        # GET请求返回设备当前状态
+        return JsonResponse({
+            'status': 'success',
+            'device': {
+                'id': wm.Device_id,
+                'name': wm.Device_name,
+                'type': wm.Device_type,
+                'status': wm.get_status(),
+                'mode': wm.get_mode(),
+                'remaining_time': wm.get_remaining_time() if hasattr(wm, 'get_remaining_time') else None,
+                'valid_modes': ['standard', 'quick', 'delicate', 'heavy', 'wool'],
+                'controls': {
+                    'can_operate': permission >= 1,
+                    'can_change_mode': permission >= 1,
+                    'can_rename': permission >= 2
+                }
+            }
+        })
+
+    except WashingMachine.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': '洗衣机设备不存在'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'操作失败: {str(e)}'
+        }, status=500)
 
 """
     robotvacuum.html对应的逻辑
-    前端需要传入设备名称（用户在devices页面点击的设备）
-    前端选择性提供设备修改的状态（new_status、new_mode、new_name）
-    设备状态包括：开关、模式、新名称
-    后端中，当用户第一次进入robotvacuum.html时，会将数据库中该设备的状态提供给前端进行展示
-    当用户修改设备状态时，后端处理这些请求，之后返回最新的设备状态给前端
+    逻辑与light基本一致(注意mode)
+    若失败，则status为error，返回各种错误信息
+    成功则返回当前设备修改后的状态
+    GET请求返回当前设备的状态
 """
-
 def robotvacuum(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    username = request.session.get('username')
-    device_name = request.POST.get('device_name')
-    robotvacuum = Robotvacuum.objects.get(Device_name=device_name)
-    permission = request.session.get('permission')
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    if request.method == 'POST':
-        # 检查用户权限
-        if permission < 1:
-            messages.error(request, '无权限操作！')
-            return redirect('robotvacuum')
-        
-        if 'new_status' in request.POST:
-            new_status = request.POST.get('new_status')
-            robotvacuum.set_status(new_status) # 0表示关闭，1表示打开
-            messages.success(request, '操作成功！')
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="robotvacuum",
-                operation='turn on' if new_status == '1' else 'turn off'
-            )
-        if 'new_mode' in request.POST:
-            new_mode = request.POST.get('new_mode')
-            robotvacuum.set_mode(new_mode)
-            messages.success(request, f"模式已修改为{new_mode}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="robotvacuum",
-                operation=f"set mode to {new_mode}"
-            )
-        if 'new_name' in request.POST:
-            new_name = request.POST.get('new_name')
-            robotvacuum.set_name(new_name)
-            messages.success(request, f"设备名已修改为{new_name}!")
-            Log.objects.create(
-                username=username,
-                devicename=device_name,
-                devicetype="robotvacuum",
-                operation=f"set name to {new_name}"
-            )
-        # robotvacuum.save()
-        return redirect(reverse('robotvacuum'))
+    try:
+        # 获取设备名称
+        if request.method == 'GET':
+            device_name = request.GET.get('device_name')
+        else:
+            data = json.loads(request.body) if request.body else {}
+            device_name = data.get('device_name')
 
-    context = {
-        'status': robotvacuum.get_status(),
-        'mode': robotvacuum.get_mode(),
-        'name': robotvacuum.get_name()
-    }
-    return render(request, 'robotvacuum.html', context)
+        if not device_name:
+            return JsonResponse({
+                'status': 'error',
+                'message': '缺少设备名称参数'
+            }, status=400)
 
+        # 获取设备对象
+        robot = Robotvacuum.objects.get(Device_name=device_name)
+        username = request.session.get('username')
+        permission = request.session.get('permission', 0)
+
+        # 处理POST请求（设备控制）
+        if request.method == 'POST':
+            response_data = {
+                'status': 'success',
+                'message': '操作成功',
+                'device': {
+                    'name': robot.Device_name,
+                    'type': robot.Device_type
+                },
+                'changes': {}
+            }
+
+            # 检查用户权限
+            if permission < 1:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '您没有权限操作扫地机器人',
+                    'redirect': 'home/devices/'
+                }, status=403)
+
+            # 设置开关状态
+            if 'new_status' in data:
+                new_status = data['new_status']
+                if new_status not in ['0', '1']:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '无效的状态值（0表示关闭，1表示打开）'
+                    }, status=400)
+                
+                robot.set_status(new_status)
+                response_data['changes']['status'] = new_status
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="robotvacuum",
+                    operation='启动清扫' if new_status == '1' else '停止清扫'
+                )
+
+            # 设置清扫模式
+            if 'new_mode' in data:
+                valid_modes = ['auto', 'spot', 'edge', 'single_room', 'mop']
+                new_mode = data['new_mode']
+                if new_mode not in valid_modes:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': f'无效的清扫模式，可选: {", ".join(valid_modes)}'
+                    }, status=400)
+                
+                robot.set_mode(new_mode)
+                response_data['changes']['mode'] = new_mode
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype="robotvacuum",
+                    operation=f"设置为 {new_mode} 模式"
+                )
+
+            # 修改设备名称
+            if 'new_name' in data:
+                new_name = data['new_name'].strip()
+                if not new_name:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': '设备名称不能为空'
+                    }, status=400)
+                
+                old_name = robot.Device_name
+                robot.set_name(new_name)
+                response_data['changes']['name'] = new_name
+                response_data['device']['name'] = new_name
+                Log.objects.create(
+                    username=username,
+                    devicename=old_name,
+                    devicetype="robotvacuum",
+                    operation=f"重命名为 {new_name}"
+                )
+
+            return JsonResponse(response_data)
+
+        # GET请求返回设备当前状态
+        return JsonResponse({
+            'status': 'success',
+            'device': {
+                'id': robot.Device_id,
+                'name': robot.Device_name,
+                'type': robot.Device_type,
+                'status': robot.get_status(),
+                'mode': robot.get_mode(),
+                'battery': robot.get_battery() if hasattr(robot, 'get_battery') else None,
+                'area_cleaned': robot.get_area_cleaned() if hasattr(robot, 'get_area_cleaned') else None,
+                'valid_modes': ['auto', 'spot', 'edge', 'single_room', 'mop'],
+                'controls': {
+                    'can_operate': permission >= 1,
+                    'can_change_mode': permission >= 1,
+                    'can_rename': permission >= 2
+                }
+            }
+        })
+
+    except Robotvacuum.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': '扫地机器人不存在'
+        }, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'操作失败: {str(e)}'
+        }, status=500)
 
 
 """
     habits.html处理逻辑
-    第一次进入页面时，后端会提供当前用户的所有habit信息，前端显示
-    启动设备时，前端需要提供用户选择的haibit选项(habit_name)，后端依据选项打开设备
+    第一次进入页面时为GET请求，返回当前用户的所有习惯（关键：devices_data）
+    POST请求时，用户选择习惯名称，传入到后端并开启所有设备，最后返回设备信息列表(activated_devices)
 """
 def habits(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    username = request.session.get('username')
-    user_habits = Habits.objects.filter(username=username)
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    if request.method == 'POST':
-        # 选择一个习惯
-        selected_habit_name = request.POST.get('habit_name')
-        habit = Habits.objects.get(username=username, habit_name=selected_habit_name)
-        for device in habit.favorite_devices.all():
-            device.turn_on()
-            Log.objects.create(
-                username=username,
-                devicename=device.get_name(),
-                devicetype=device.Device_type,
-                operation='turn on'
-            )
+    try:
+        username = request.session.get('username')
+        
+        # 处理POST请求（执行习惯）
+        if request.method == 'POST':
+            data = json.loads(request.body) if request.body else {}
+            habit_name = data.get('habit_name')
+            
+            if not habit_name:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请选择要执行的习惯'
+                }, status=400)
+            
+            try:
+                habit = Habits.objects.get(username=username, habit_name=habit_name)
+                activated_devices = []
+                
+                for device in habit.favorite_devices.all():
+                    # 开启设备
+                    device.turn_on()
+                    device_info = {
+                        'name': device.Device_name,
+                        'type': device.Device_type,
+                        'status': device.get_status()
+                    }
+                    activated_devices.append(device_info)
+                    
+                    # 记录日志
+                    Log.objects.create(
+                        username=username,
+                        devicename=device.Device_name,
+                        devicetype=device.Device_type,
+                        operation=f"通过习惯'{habit_name}'启动"
+                    )
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f"习惯'{habit_name}'已执行",
+                    'activated_devices': activated_devices
+                })
+                
+            except Habits.DoesNotExist:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '找不到指定的习惯'
+                }, status=404)
 
-    context = {
-        'user_habits': user_habits,
-        'username': username,
-    }
-    return render(request, 'habits.html', context)
+        # GET请求返回用户所有习惯
+        user_habits = Habits.objects.filter(username=username)
+        habits_data = []
+        
+        for habit in user_habits:
+            devices_data = []
+            for device in habit.favorite_devices.all():
+                devices_data.append({
+                    'id': device.Device_id,
+                    'name': device.Device_name,
+                    'type': device.Device_type,
+                    'status': device.get_status() if hasattr(device, 'get_status') else None
+                })
+            
+            habits_data.append({
+                'id': habit.habit_id,
+                'name': habit.habit_name,
+                'created_at': habit.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'devices': devices_data
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'habits': habits_data,
+            'username': username,
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'操作失败: {str(e)}'
+        }, status=500)
         
 
 """
     add_habit.html逻辑
-    前端需要提供用户选择的设备名和习惯名称（提供文本框输入习惯名称）
-    后端创建一条habit记录，将这些设备加入到habit中
-    第一次进入页面时，后端提供所有设备（类似于devices），供用户选择
-    数据格式为：
-    selected_devices = request.POST.getlist('device_name')
-    habit_name = request.POST.get('habit_name')
+    检查各种条件是否满足，若不满足则status为error，message为错误信息
+    POST请求时，前端提供各种设备名device_names（列表），之后创建一条habit记录
+    GET请求时，返回所有设备的信息（关键：devices）
 """
 def add_habit(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    username = request.session.get('username')
-    
-    if request.method == 'POST':
-        # 获取用户提交的设备名称列表
-        selected_devices = request.POST.getlist('device_name')
-        habit_name = request.POST.get('habit_name')
-
-        # 创建新的habit记录
-        habit = Habits(username=username, habit_name=habit_name)
-        habit.save()
-
-        # 遍历选中的设备，将它们添加到habit记录中
-        for device_name in selected_devices:
-            device = Device.objects.get(Device_name=device_name)
-            if device not in habit.favorite_devices.all():
-                habit.favorite_devices.add(device)
-                Log.objects.create(
-                    username=username,
-                    devicename=device_name,
-                    devicetype=Device.objects.get(Device_name=device_name).Device_type,
-                    operation=f"add to habit {habit_name}"
-                )
+    try:
+        username = request.session.get('username')
+        permission = request.session.get('permission', 0)
         
-        messages.success(request, '习惯添加完成')
-        return redirect('habits')  # 重定向到主页
+        # 检查用户权限
+        if permission < 1:
+            return JsonResponse({
+                'status': 'error',
+                'message': '您没有权限创建习惯',
+                'redirect': '/home/habits/'
+            }, status=403)
 
-    # 如果不是 POST 请求，或者用户直接访问该页面，显示添加习惯的表单
-    devices = Device.objects.all()
-    return render(request, 'add_habit.html', {'devices': devices, 'username': username})
+        # 处理POST请求（创建新习惯）
+        if request.method == 'POST':
+            data = json.loads(request.body) if request.body else {}
+            selected_device_names = data.get('device_names', [])
+            habit_name = data.get('habit_name', '').strip()
+
+            # 验证输入
+            if not habit_name:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '习惯名称不能为空'
+                }, status=400)
+                
+            if not selected_device_names:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请至少选择一个设备'
+                }, status=400)
+
+            # 检查习惯是否已存在
+            if Habits.objects.filter(username=username, habit_name=habit_name).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '该习惯名称已存在'
+                }, status=400)
+
+            # 创建新习惯
+            habit = Habits.objects.create(
+                username=username,
+                habit_name=habit_name
+            )
+
+            # 添加设备到习惯
+            added_devices = []
+            for device_name in selected_device_names:
+                try:
+                    device = Device.objects.get(Device_name=device_name)
+                    habit.favorite_devices.add(device)
+                    added_devices.append({
+                        'id': device.Device_id,
+                        'name': device.Device_name,
+                        'type': device.Device_type
+                    })
+                    
+                    Log.objects.create(
+                        username=username,
+                        devicename=device.Device_name,
+                        devicetype=device.Device_type,
+                        operation=f"添加到习惯'{habit_name}'"
+                    )
+                except Device.DoesNotExist:
+                    continue
+
+            return JsonResponse({
+                'status': 'success',
+                'message': '习惯创建成功',
+                'habit': {
+                    'id': habit.id,
+                    'name': habit.habit_name,
+                    'device_count': len(added_devices)
+                },
+                'added_devices': added_devices
+            })
+
+        # GET请求返回所有可用设备
+        devices = Device.objects.all()
+        device_list = []
+        
+        for device in devices:
+            device_list.append({
+                'id': device.Device_id,
+                'name': device.Device_name,
+                'type': device.Device_type,
+                'status': device.get_status() if hasattr(device, 'get_status') else None
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'devices': device_list,
+            'username': username
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'创建习惯失败: {str(e)}'
+        }, status=500)
 
 """
     delete_habit.html逻辑
-    第一次登录时，后端提供所有当前用户的习惯
-    之后用户选择习惯，后端进行删除，并返回新的习惯列表
-    前端需要提供删除的习惯名称
+    与add_habit类似
+    当POST请求时，执行删除逻辑，并返回剩余的习惯记录(remaining_habits)
+    当GET请求时，返回所有的习惯记录(habits_data)
 """
 def delete_habit(request):
+    # 验证登录状态
     if not request.session.get('is_authenticated'):
-        messages.error(request, '请先登录！')
-        return redirect('login')  # 重定向到登录页面
-    
-    username = request.session.get('username')
-    habits = Habits.objects.filter(username=username)
+        return JsonResponse({
+            'status': 'error',
+            'message': '请先登录！',
+            'redirect': '/login/'
+        }, status=401)
 
-    if request.method == 'POST':
-        habit_name = request.POST.get('habit_name')
-        habit = Habits.objects.get(habit_name=habit_name)
-        for device in habit.favorite_devices.all():
-            Log.objects.create(
-                username=username,
-                devicename=device.get_name(),
-                devicetype=device.Device_type,
-                operation=f"delete from habit {habit_name}"
-            )
-        habit.delete()
-        messages.success(request, '删除成功！')
+    try:
+        username = request.session.get('username')
+        permission = request.session.get('permission', 0)
         
-        return redirect('habits')
-    
-    context = {
-        'habits': habits,
-        'username': username
-    }
+        # 检查用户权限
+        if permission < 1:
+            return JsonResponse({
+                'status': 'error',
+                'message': '您没有权限删除习惯',
+                'redirect': '/home/habits/'
+            }, status=403)
 
-    return render(request, 'delete_habit.html', context)
+        # 处理POST请求（删除习惯）
+        if request.method == 'POST':
+            data = json.loads(request.body) if request.body else {}
+            habit_name = data.get('habit_name')
 
+            if not habit_name:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请提供要删除的习惯名称'
+                }, status=400)
 
+            try:
+                habit = Habits.objects.get(username=username, habit_name=habit_name)
+                
+                # 记录删除日志
+                for device in habit.favorite_devices.all():
+                    Log.objects.create(
+                        username=username,
+                        devicename=device.Device_name,
+                        devicetype=device.Device_type,
+                        operation=f"从习惯'{habit_name}'中移除"
+                    )
+                
+                # 删除习惯
+                habit.delete()
+                
+                # 获取剩余习惯
+                remaining_habits = list(Habits.objects.filter(username=username).values(
+                    'id', 'habit_name', 'description'
+                ))
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f"习惯'{habit_name}'已删除",
+                    'remaining_habits': remaining_habits
+                })
+                
+            except Habits.DoesNotExist:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '找不到指定的习惯'
+                }, status=404)
 
-
-
-
-
-# '''
-#     这个是habits的主界面，会显示所有已经添加过的habits，然后每一条habits可以的后面有一个可以勾选的方框，
-#     然后最下面有一个应用和删除按钮，点击后会将勾选的记录的信息列表传给后端，后端根据method种类执行对应操作
-# '''
-# def habit(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-
-#     username = request.session.get('username')
-#     user_habits = habits.objects.filter(username=username)  # 获取当前用户的所有习惯
-
-#     if request.method == 'POST':
-#         # 获取用户勾选的习惯ID列表
-#         selected_habit_ids = request.POST.getlist('habit_id')
-
-#         # 遍历选中的习惯并应用
-#         for habit_id in selected_habit_ids:
-#             habit = habits.objects.get(habit_id=habit_id)
-#             apply_habit(request, habit)
-
-#         messages.success(request, '所选习惯已成功应用')
-#         return redirect('habits_page')
-
-#     if request.method == 'DELETE':
-#         # 获取要删除的习惯ID
-#         selected_habit_ids = request.POST.getlist('habit_id')
-
-#         # 遍历选中的习惯并应用
-#         for habit_id in selected_habit_ids:
-#             habit = habits.objects.get(habit_id=habit_id)
-#             habit.delete()
-
-#         messages.success(request, '习惯已成功删除')
-#         return redirect('habits_page')
-    
-#     return render(request, 'habits.html', {'user_habits': user_habits})
-
-
-# # 用户添加一条habit记录，流程是用户不断添加设备，前端将设备名传给后端，然后添加到habits的devices，直到用户点击前端的 “完成”按键，停止添加设备
-# '''
-#     这个函数的功能在add_habit前端页面完成，只要前端method不为complete，就会一直传入设备，然后添加
-# '''
-# def add_habit(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-
-#     username = request.session.get('username')
-    
-#     if request.method == 'POST':
-#         # 获取用户提交的设备名称列表
-#         selected_devices = request.POST.getlist('device_name')
-
-#         # 创建新的habit记录
-#         habit = habits(username=username)
-#         habit.save()
-
-#         # 遍历选中的设备，将它们添加到habit记录中
-#         for device_name in selected_devices:
-#             device = Device.objects.get(Device_name=device_name)
-#             if device not in habit.favorite_devices.all():
-#                 habit.favorite_devices.add(device)
+        # GET请求返回用户所有习惯
+        habits = Habits.objects.filter(username=username)
+        habits_data = []
         
-#         messages.success(request, '习惯添加完成')
-#         return redirect('habits')  # 重定向到主页
-
-#     # 如果不是 POST 请求，或者用户直接访问该页面，显示添加习惯的表单
-#     devices = Device.objects.all()
-#     return render(request, 'add_habit.html', {'devices': devices, 'username': username})
-
-
-# # 应用habit，用户在habits界面选择一个habit应用，然后将这个habit里面的所有设备都开启
-# '''
-#     这个功能放在habits页面里
-#     habits页面显示目前有的所有habits，然后用户可以勾选某些habit，然后点击应用来调用apply_habit函数；
-#     add_habit可以作为一个按键，点击就跳转到add_habit页面
-# '''
-# def apply_habit(request,habit):
-#     # 获取习惯中的所有设备
-#     devices = habit.favorite_devices.all()
-
-#     # 遍历设备并调用turn_on函数开启设备
-#     for device in devices:
-#         turn_on_device(request, device.Device_name)
-
-# def turn_on_device(request,device_name):
-#     request.method = 'POST'  # 模拟POST请求
-#     request.POST = {'device_name': device_name}  # 设置设备名称
-#     return turn_on(request) # 调用turn on，会写入日志
-
-# """
-#     设备操作之后，加入日志（设备名、设备类型、操作、用户、时间）
-# """
-# def turn_on(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-#     current_user_permission = request.session.get('permission')
-    
-#     # 根据设备ID获取设备对象
-#     device_name = request.POST.get('device_name')
-#     username = request.session.get('username')
-#     device = Device.objects.get(Device_name=device_name)
-    
-#     # 根据设备类型调用相应的 turn_on 方法
-#     if device.Device_type == 'Light':
-#         # 灯不需要权限检查
-#         light = Light.objects.get(Device_name=device_name)
-#         light.turn_on()
-#         light.save()
-#     elif device.Device_type in ['AirConditioner', 'Curtain', 'WashingMachine', 'RobotVacuum']:
-#         # 其他设备需要权限至少为1
-#         if current_user_permission < 1:
-#             messages.error(request, '您没有权限打开此设备')
-#             return redirect('devices')  # 重定向到设备列表页面
+        for habit in habits:
+            habits_data.append({
+                'id': habit.id,
+                'name': habit.habit_name,
+                'description': habit.description if hasattr(habit, 'description') else '',
+                'device_count': habit.favorite_devices.count(),
+                'created_at': habit.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            })
         
-#         if device.Device_type == 'AirConditioner':
-#             air_conditioner = AirConditioner.objects.get(Device_name=device_name)
-#             air_conditioner.turn_on()
-#             air_conditioner.save()
-#         elif device.Device_type == 'Curtain':
-#             curtain = Curtain.objects.get(Device_name=device_name)
-#             curtain.turn_on()
-#             curtain.save()
-#         elif device.Device_type == 'WashingMachine':
-#             washing_machine = WashingMachine.objects.get(Device_name=device_name)
-#             washing_machine.turn_on()
-#             washing_machine.save()
-#         elif device.Device_type == 'RobotVacuum':
-#             robot_vacuum = Robotvacuum.objects.get(Device_name=device_name)
-#             robot_vacuum.turn_on()
-#             robot_vacuum.save()
+        return JsonResponse({
+            'status': 'success',
+            'habits_data': habits_data,
+            'username': username
+        })
 
-#     current_time = timezone.now()
-#     # 创建日志
-#     Log.objects.create(
-#         username=username,
-#         devicename=device.Device_name,
-#         devicetype=device.Device_type,
-#         operation='turn on',
-#         timestamp=current_time
-#     )
-
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device.Device_name} 已打开')
-#     return redirect('devices')
-
-# """
-#     设备操作之后，加入日志（设备名、设备类型、操作、用户、时间）
-# """
-# def turn_off(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-#     current_user_permission = request.session.get('permission')
-
-#     device_name = request.POST.get('device_name')
-#     username = request.session.get('username')
-#     device = Device.objects.get(Device_name=device_name)
-
-#     if device.Device_type == 'Light':
-#         # 灯不需要权限检查
-#         light = Light.objects.get(Device_name=device_name)
-#         light.turn_off()
-#         light.save()
-#     elif device.Device_type in ['AirConditioner', 'Curtain', 'WashingMachine', 'RobotVacuum']:
-#         # 其他设备需要权限至少为1
-#         if current_user_permission < 1:
-#             messages.error(request, '您没有权限关闭此设备')
-#             return redirect('devices')  # 重定向到设备列表页面
-        
-#         if device.Device_type == 'AirConditioner':
-#             air_conditioner = AirConditioner.objects.get(Device_name=device_name)
-#             air_conditioner.turn_off()
-#             air_conditioner.save()
-#         elif device.Device_type == 'Curtain':
-#             curtain = Curtain.objects.get(Device_name=device_name)
-#             curtain.turn_off()
-#             curtain.save()
-#         elif device.Device_type == 'WashingMachine':
-#             washing_machine = WashingMachine.objects.get(Device_name=device_name)
-#             washing_machine.turn_off()
-#             washing_machine.save()
-#         elif device.Device_type == 'RobotVacuum':
-#             robot_vacuum = Robotvacuum.objects.get(Device_name=device_name)
-#             robot_vacuum.turn_off()
-#             robot_vacuum.save()
-#     current_time = timezone.now()
-
-#     # 创建日志
-#     Log.objects.create(
-#         username=username,
-#         devicename=device.Device_name,
-#         devicetype=device.Device_type,
-#         operation='turn off',
-#         timestamp=current_time
-#     )
-
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device.Device_name} 已关闭')
-#     return redirect('devices')
-
-# """
-#     设备操作之后，加入日志（设备名、设备类型、操作、用户、时间）
-#     然后相比turnon和turnoff，需要多传入brightness
-# """
-# def set_brightness(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-#     current_user_permission = request.session.get('permission')
-    
-#     # 根据设备ID获取设备对象
-#     device_name = request.POST.get('device_name')
-#     brightness = request.POST.get('brightness')
-#     username = request.session.get('username')
-#     device = Device.objects.get(Device_name=device_name)
-#     light = Light.objects.get(Device_name=device_name)
-#     light.set_brightness(brightness)
-#     light.save()
-#     current_time = timezone.now()
-#     Log.objects.create(
-#         username=username,
-#         devicename=device.Device_name,
-#         devicetype=device.Device_type,
-#         operation='set brightness: f{brightness}',
-#         timestamp=current_time
-#     )
-    
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device.Device_name} 已调整亮度')
-#     return redirect('devices')
-
-# """
-#     设备操作之后，加入日志（设备名、设备类型、操作、用户、时间）
-#     然后相比turnon和turnoff，需要多传入mode
-# """
-# def aircondition_set_mode(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-#     current_user_permission = request.session.get('permission')
-#     if current_user_permission < 1:
-#         messages.error(request, '您没有权限修改此设备')
-#         return redirect('devices')
-#     # 根据设备ID获取设备对象
-#     device_name = request.POST.get('device_name')
-#     mode = request.POST.get('mode')
-#     username = request.session.get('username')
-#     device = Device.objects.get(Device_name=device_name)
-#     airconditioner = AirConditioner.objects.get(Device_name=device_name)
-#     airconditioner.set_mode(mode)
-#     airconditioner.save()
-#     current_time = timezone.now()
-#     Log.objects.create(
-#         username=username,
-#         devicename=device.Device_name,
-#         devicetype=device.Device_type,
-#         operation='set mode: f{mode}',
-#         timestamp=current_time
-#     )
-
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device.Device_name} 已修改模式')
-#     return redirect('devices')
-
-# def aircondition_set_temperature(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-#     current_user_permission = request.session.get('permission')
-#     if current_user_permission < 1:
-#         messages.error(request, '您没有权限修改此设备')
-#         return redirect('devices')
-#     device_name = request.POST.get('device_name')
-#     temperature = request.POST.get('temperature').int()
-#     username = request.session.get('username')
-#     device = Device.objects.get(Device_name=device_name)
-#     airconditioner = AirConditioner.objects.get(Device_name=device_name)
-#     airconditioner.set_temperature(temperature)
-#     airconditioner.save()
-#     current_time = timezone.now()
-#     Log.objects.create(
-#         username=username,
-#         devicename=device.Device_name,
-#         devicetype=device.Device_type,
-#         operation='set temperature: f{temperature}',
-#         timestamp=current_time
-#     )
-    
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device.Device_name} 已修改温度')
-#     return redirect('devices')
-
-# def washing_set_mode(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-#     current_user_permission = request.session.get('permission')
-#     if current_user_permission < 1:
-#         messages.error(request, '您没有权限修改此设备')
-#         return redirect('devices')
-#     device_name = request.POST.get('device_name')
-#     mode = request.POST.get('mode')
-#     username = request.session.get('username')
-#     device = Device.objects.get(Device_name=device_name)
-#     washingMachine = WashingMachine.objects.get(Device_name=device_name)
-#     washingMachine.set_mode(mode)
-#     washingMachine.save()
-#     current_time = timezone.now()
-#     Log.objects.create(
-#         username=username,
-#         devicename=device.Device_name,
-#         devicetype=device.Device_type,
-#         operation='set mode: f{mode}',
-#         timestamp=current_time
-#     )
-    
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device.Device_name} 已修改模式')
-#     return redirect('devices')
-
-# def RobotVacuum_set_mode(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-#     current_user_permission = request.session.get('permission')
-#     if current_user_permission < 1:
-#         messages.error(request, '您没有权限修改此设备')
-#         return redirect('devices')
-#     device_name = request.POST.get('device_name')
-#     mode = request.POST.get('mode')
-#     username = request.session.get('username')
-#     device = Device.objects.get(Device_name=device_name)
-#     robotvacuum = Robotvacuum.objects(Device_name = device_name)
-#     robotvacuum.set_mode(mode)
-#     robotvacuum.save()
-#     current_time = timezone.now()
-#     Log.objects.create(
-#         username=username,
-#         devicename=device.Device_name,
-#         devicetype=device.Device_type,
-#         operation='set mode: f{mode}',
-#         timestamp=current_time
-#     )
-    
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device.Device_name} 已修改模式')
-#     return redirect('devices')
-
-# def change_name(request):
-#     if not request.session.get('is_authenticated'):
-#         messages.error(request, '请先登录！')
-#         return redirect('login')  # 重定向到登录页面
-
-#     current_user_permission = request.session.get('permission')
-#     if current_user_permission < 1:
-#         messages.error(request, '您没有权限重命名设备')
-#         return redirect('devices')  # 重定向到设备列表页面
-
-#     # 获取设备当前名称和新名称
-#     device_name = request.POST.get('device_name')
-#     new_device_name = request.POST.get('new_device_name')
-#     username = request.session.get('username')
-
-#     # 检查新名称是否为空
-#     if not new_device_name:
-#         messages.error(request, '新设备名称不能为空')
-#         return redirect('devices')
-
-#     # 检查新名称是否与现有设备名称冲突
-#     if Device.objects.filter(Device_name=new_device_name).exists():
-#         messages.error(request, '新设备名称已存在，请选择其他名称')
-#         return redirect('devices')
-
-#     # 获取设备对象
-#     try:
-#         device = Device.objects.get(Device_name=device_name)
-#     except Device.DoesNotExist:
-#         messages.error(request, '设备不存在')
-#         return redirect('devices')
-
-#     # 更新设备名称
-#     device.Device_name = new_device_name
-#     device.save()
-#     current_time = timezone.now()
-
-#     # 创建日志
-#     Log.objects.create(
-#         username=username,
-#         devicename=new_device_name,
-#         devicetype=device.Device_type,
-#         operation='rename: f{new_device_name}',
-#         timestamp=current_time
-#     )
-
-#     # 返回操作成功信息并重定向到设备列表页面
-#     messages.success(request, f'{device_name} 已成功重命名为 {new_device_name}')
-#     return redirect('devices')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'删除习惯失败: {str(e)}'
+        }, status=500)

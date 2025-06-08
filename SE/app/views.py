@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.db.models import Max
 from django.utils import timezone
 from .models import *
+import time
 
 """
 前端需要实现的界面：
@@ -349,8 +350,8 @@ def query_Log(request):
     # 无权限查看，返回空页面，抛出错误信息
     if current_user_permission < 1:
         messages.error(request, "您没有权限查看此信息")
-        log_data = []
-        return JsonResponse({'log_data': log_data}) # 返回空列表
+        time.sleep(1)
+        return redirect('home')
     
     # 获取筛选条件
     if request.method == 'POST':
@@ -380,7 +381,9 @@ def query_Log(request):
         })
     
     # 返回JSON响应
-    return JsonResponse({'logs': log_data})
+    context = {'logs': log_data}
+    return render(request, 'query_logs.html', context)
+    # return JsonResponse({'logs': log_data})
 
 '''
     devices主页面

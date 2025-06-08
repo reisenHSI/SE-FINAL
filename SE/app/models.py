@@ -82,6 +82,18 @@ class Device(models.Model):
         self.Device_status = 0
         self.save()
 
+    def set_status(self,status):
+        self.Device_status = status
+        self.save()
+
+    # 设置名字
+    def set_name(self, name):
+        self.Device_name = name
+        self.save()
+
+    # 获取名字
+    def get_name(self):
+        return self.Device_name
     # 获取设备状态
     def get_status(self):
         return self.Device_status
@@ -103,9 +115,6 @@ class Device(models.Model):
     def get_device(self, Device_name):
         return Device.objects.get(Device_name=Device_name)
     
-    # 获取设备状态
-    def get_status(self):
-        return self.Device_status
     
 # 灯
 class Light(Device):
@@ -115,11 +124,14 @@ class Light(Device):
     def __str__(self):
         return f"Light: {self.Device_name}"
 
+    # 获取亮度
+    def get_brightness(self):
+        return self.brightness
+    
     # 修改亮度
     def set_brightness(self, brightness):
-        if brightness >= 0 and brightness <= 100:
-            self.brightness = brightness
-            self.save()
+        self.brightness = brightness
+        self.save()
 
     # 添加设备
     def add_light(self, Device_id, Device_name, Device_status=0, brightness=50):
@@ -134,6 +146,14 @@ class AirConditioner(Device):
 
     def __str__(self):
         return f"AirConditioner: {self.Device_name}"
+    
+    # 获取亮度
+    def get_temperature(self):
+        return self.temperature
+    
+    # 获取模式
+    def get_mode(self):
+        return self.mode
 
     # 设置模式：cool,heat,dry
     def set_mode(self, new_mode):
@@ -168,6 +188,10 @@ class WashingMachine(Device):
 
     def __str__(self):
         return f"WashingMachine: {self.Device_name}"
+    
+    # 获取模式
+    def get_mode(self):
+        return self.mode
 
     # 设置模式：wash，dry,fastwash
     def set_mode(self, mode):
@@ -187,6 +211,10 @@ class Robotvacuum(Device):
     def __str__(self):
         return f"RobotVacuum: {self.Device_name}"
     
+    # 获取模式
+    def get_mode(self):
+        return self.mode
+    
     # 设置模式：sweep，mop
     def set_mode(self, mode):
         self.mode = mode
@@ -203,13 +231,14 @@ class Robotvacuum(Device):
 一条记录维护该用户的常用设备
 在view.py中实现一键开启和一键关闭逻辑
 """
-class habits(models.Model):
+class Habits(models.Model):
     habit_id = models.IntegerField(primary_key=True)
     username = models.CharField(max_length=20)
+    habit_name = models.CharField(max_length=20)
     favorite_devices = models.ManyToManyField(Device) # 常用设备列表
 
     def __str__(self):
-        return f"{self.username}'s habit"
+        return self.habit_name
     
     #  用户添加习惯
     def add_favorite_device(self, device):

@@ -41,3 +41,21 @@ DevicesDetail实现跳转到具体设备的逻辑
 Light等具体设备的逻辑
 
 添加/删除设备的逻辑
+
+# 运行:  
+
+运行后端  
+```bash
+cd SE
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
+cd ..
+```
+
+运行前端  
+```bash
+cd frontend-project
+npm install
+npm run dev
+```

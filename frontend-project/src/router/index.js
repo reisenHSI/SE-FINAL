@@ -9,7 +9,7 @@ import Curtain from '@/views/devices/Curtain.vue'
 import AirConditioner from '@/views/devices/AirConditioner.vue'
 import WashingMachine from '@/views/devices/WashingMachine.vue'
 import RobotVacuum from '@/views/devices/RobotVacuum.vue'
-/*
+
 const routes = [
   {
     path: '/',
@@ -31,12 +31,6 @@ const routes = [
 
     // 防止路径不匹配导致页面空白
   { path: '/:catchAll(.*)', redirect: '/login' },
-]*/
-
-const routes = [
-  { path: '/', component: Home },
-  { path: '/login', component: Login },
-  { path: '/register', component: Register }
 ]
 
 const router = createRouter({

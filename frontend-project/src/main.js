@@ -8,7 +8,7 @@ import 'element-plus/dist/index.css'
 
 // 全局 axios 实例
 import axios from 'axios'
-export const API_BASE_URL = 'http://localhost:8000/api/'
+export const API_BASE_URL = 'http://127.0.0.1:8000/'
 
 const app = createApp(App)
 

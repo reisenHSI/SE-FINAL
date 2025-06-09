@@ -3,3 +3,4 @@
 .vscode/
 
 /frontend-project/node_modules/
+**/__pycache__/

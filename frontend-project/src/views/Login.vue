@@ -33,13 +33,13 @@ export default {
     return {
       username: '',
       password: '',
-      isLogin: false,
+      isSubmitting: false,
       errorMessage: '',
     }
   },
   methods: {
     async login() {
-      this.isLogin = false;
+      this.isSubmitting = true;
       this.errorMessage = '';
 
       try {
@@ -49,21 +49,26 @@ export default {
         },{withCredentials:true,});
 
         // 处理请求返回的信息
-        if (response) {
-
+        if (response.data.status === 'success') {
+          localStorage.setItem('token', 'true');
+          this.$router.push('/home');  // 跳转到home界面
+        } else {
+          this.errorMessage = response.data.message;
         }
-
       } catch (error) {
-        console.error('登陆失败:', error);
+        console.error('登录失败:', error);
         this.errorMessage = error.response.data.message || '未知错误';
       } finally {
-        this.isLogin = false;
+        this.isSubmitting = false;
       }
     },
 
     goToRegister() {
       this.$router.push('/register');
     }
+  },
+  mounted() {
+    console.log('Login 页面已加载')
   }
 }
 </script>

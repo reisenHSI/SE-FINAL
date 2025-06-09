@@ -12,10 +12,10 @@
 </template>
 
 <script>
-import Header from '../components/Header.vue'
-import Footer from '../components/Footer.vue'
-import Devices from './Devices.vue'
-import LeftSide from '../components/LeftSide.vue'
+import Header from '@/components/Header.vue'
+import Footer from '@/components/Footer.vue'
+import Devices from '@/views/Devices.vue'
+import LeftSide from '@/components/LeftSide.vue'
 
 export default {
   name: 'Home',

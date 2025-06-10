@@ -23,7 +23,8 @@ export default {
   },
   methods: {
     logout() {
-      // 这里可以清除 token 等登录信息
+      // 清除 token 等登录信息
+      localStorage.removeItem('token')
       // localStorage.removeItem('token')
       this.$router.push('/login')
     },

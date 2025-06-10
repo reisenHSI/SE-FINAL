@@ -4,7 +4,8 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
-    port: 3000,       // 你可以自定义开发服务器端口
+    port: 8085,       // 自定义开发服务器端口
+    host: 'localhost',
     open: true,       // 启动后自动打开浏览器
   },
   resolve: {

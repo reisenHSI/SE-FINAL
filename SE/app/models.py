@@ -9,7 +9,11 @@ class User(models.Model):
     username = models.CharField(max_length=20) # 用户名
     password = models.CharField(max_length=20) # 密码
     phone = models.CharField(max_length=20) # 电话号码
+<<<<<<< HEAD
     age = models.IntegerField() # 年龄
+=======
+    age = models.IntegerField(3) # 年龄
+>>>>>>> c9183904b175861cd2f5dfc1832ccb1244957a4f
     User_id = models.IntegerField(primary_key=True) # 用户id——主键
     permission = models.fields.IntegerField(default=0) # 权限——儿童为0，成人为1，工作人员为2
 

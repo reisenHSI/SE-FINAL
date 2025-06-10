@@ -62,8 +62,10 @@ export default {
         });
 
         // 处理返回的信息
-        if (response) {
-
+        if (response.data.status === 'success') {
+          this.$router.push("/login");  // 跳转到登陆界面
+        } else {
+          this.errorMessage = response.data.message;
         }
       } catch (error) {
         console.error("Register error:", error);

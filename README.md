@@ -30,13 +30,9 @@ views.py中每一个函数对应页面跳转的一个方框
 
 to do:
 
+！！！页面渲染未成功待解决（6.9）
+
 请参考views.py和urls.py中添加/删除/修改前端的文件
-
-已完成的部分前端可能需要修改
-
-登录和注册的post返回信息的处理
-
-index.js中获取登陆状态的逻辑
 
 Devices陈列所有设备信息
 
@@ -45,3 +41,21 @@ DevicesDetail实现跳转到具体设备的逻辑
 Light等具体设备的逻辑
 
 添加/删除设备的逻辑
+
+# 运行:  
+
+运行后端  
+```bash
+cd SE
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
+cd ..
+```
+
+运行前端  
+```bash
+cd frontend-project
+npm install
+npm run dev
+```

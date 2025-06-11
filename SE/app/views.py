@@ -65,12 +65,11 @@ def register(request):
                 permission = 0  # 儿童
 
             # 创建新用户
-            new_user = User(
+            new_user = User.objects.create(
                 username=username,
                 password=make_password(password),
                 phone=phone,
                 age = int(age),
-                User_id=User.objects.count() + 1,
                 permission=permission
             )
             new_user.save()
@@ -380,6 +379,12 @@ def add_device(request):
                     'status': 'error',
                     'message': '设备名称和类型不能为空'
                 }, status=400)
+            
+            if device_type not in ['Light', 'WashingMachine', 'Robotvacuum', 'AirConditioner', 'Curtain']:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '设备类型错误'
+                }, status=400)
 
             # 检查设备是否已存在
             if Device.objects.filter(Device_name=device_name).exists():
@@ -387,16 +392,6 @@ def add_device(request):
                     'status': 'error',
                     'message': '设备名称已存在'
                 }, status=400)
-
-            # 获取最大ID
-            max_id = Device.objects.aggregate(max_id=Max('Device_id'))['max_id'] or 0
-            
-            # 创建设备记录
-            device_data = {
-                'Device_id': max_id + 1,
-                'Device_name': device_name,
-                'Device_type': device_type
-            }
 
             # 根据设备类型创建具体设备
             device_models = {
@@ -408,7 +403,10 @@ def add_device(request):
             }
 
             if device_type in device_models:
-                new_device = device_models[device_type].objects.create(**device_data)
+                new_device = device_models[device_type].objects.create(
+                    Device_name=device_name,
+                    Device_type=device_type
+                )
             else:
                 return JsonResponse({
                     'status': 'error',
@@ -763,17 +761,6 @@ def light(request):
 
         # 处理POST请求（设备控制）
         if request.method == 'POST':
-            # 初始化响应数据
-            response_data = {
-                'status': 'success',
-                'message': '操作成功',
-                'device': {
-                    'name': light.Device_name,
-                    'type': light.Device_type
-                },
-                'changes': {}
-            }
-
             # 处理状态变更
             if 'new_status' in data:
                 new_status = data['new_status']
@@ -784,7 +771,6 @@ def light(request):
                     }, status=400)
                 
                 light.set_status(new_status)
-                response_data['changes']['status'] = new_status
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -802,7 +788,6 @@ def light(request):
                     }, status=400)
                 
                 light.set_brightness(new_brightness)
-                response_data['changes']['brightness'] = new_brightness
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -821,20 +806,12 @@ def light(request):
                 
                 old_name = light.Device_name
                 light.set_name(new_name)
-                response_data['changes']['name'] = new_name
-                response_data['device']['name'] = new_name
                 Log.objects.create(
                     username=username,
                     devicename=old_name,
                     devicetype="light",
                     operation=f"rename to {new_name}"
                 )
-
-            # 如果没有实际修改
-            if not response_data['changes']:
-                response_data['message'] = '未检测到有效修改'
-
-            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -845,11 +822,6 @@ def light(request):
                 'type': light.Device_type,
                 'status': light.get_status(),
                 'brightness': light.get_brightness(),
-                'controls': {
-                    'can_change_status': True,
-                    'can_adjust_brightness': True,
-                    'can_rename': request.session.get('permission', 0) >= 1
-                }
             }
         })
 
@@ -905,16 +877,6 @@ def airConditioner(request):
 
         # 处理POST请求（设备控制）
         if request.method == 'POST':
-            response_data = {
-                'status': 'success',
-                'message': '操作成功',
-                'device': {
-                    'name': ac.Device_name,
-                    'type': ac.Device_type
-                },
-                'changes': {}
-            }
-
             # 验证和设置温度（16-30度）
             if 'new_temperature' in data:
                 new_temp = int(data['new_temperature'])
@@ -925,7 +887,6 @@ def airConditioner(request):
                     }, status=400)
                 
                 ac.set_temperature(new_temp)
-                response_data['changes']['temperature'] = new_temp
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -944,7 +905,6 @@ def airConditioner(request):
                     }, status=400)
                 
                 ac.set_mode(new_mode)
-                response_data['changes']['mode'] = new_mode
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -962,7 +922,6 @@ def airConditioner(request):
                     }, status=400)
                 
                 ac.set_status(new_status)
-                response_data['changes']['status'] = new_status
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -987,16 +946,12 @@ def airConditioner(request):
                 
                 old_name = ac.Device_name
                 ac.set_name(new_name)
-                response_data['changes']['name'] = new_name
-                response_data['device']['name'] = new_name
                 Log.objects.create(
                     username=username,
                     devicename=old_name,
                     devicetype="airConditioner",
                     operation=f"rename to {new_name}"
                 )
-
-            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1008,15 +963,9 @@ def airConditioner(request):
                 'status': ac.get_status(),
                 'temperature': ac.get_temperature(),
                 'mode': ac.get_mode(),
-                'valid_modes': ['cool', 'heat', 'dry'],
+                'valid_modes': ['cool', 'heat', 'auto', 'dry', 'fan'],
                 'min_temp': 16,
-                'max_temp': 30,
-                'controls': {
-                    'can_change_status': True,
-                    'can_adjust_temp': True,
-                    'can_change_mode': True,
-                    'can_rename': permission >= 1
-                }
+                'max_temp': 30
             }
         })
 
@@ -1072,16 +1021,6 @@ def curtain(request):
 
         # 处理POST请求（设备控制）
         if request.method == 'POST':
-            response_data = {
-                'status': 'success',
-                'message': '操作成功',
-                'device': {
-                    'name': curtain.Device_name,
-                    'type': curtain.Device_type
-                },
-                'changes': {}
-            }
-
             # 设置开关状态
             if 'new_status' in data:
                 new_status = data['new_status']
@@ -1092,7 +1031,6 @@ def curtain(request):
                     }, status=400)
                 
                 curtain.set_status(new_status)
-                response_data['changes']['status'] = new_status
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -1117,8 +1055,6 @@ def curtain(request):
                 
                 old_name = curtain.Device_name
                 curtain.set_name(new_name)
-                response_data['changes']['name'] = new_name
-                response_data['device']['name'] = new_name
                 Log.objects.create(
                     username=username,
                     devicename=old_name,
@@ -1126,7 +1062,6 @@ def curtain(request):
                     operation=f"重命名为 {new_name}"
                 )
 
-            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1136,10 +1071,6 @@ def curtain(request):
                 'name': curtain.Device_name,
                 'type': curtain.Device_type,
                 'status': curtain.get_status(),
-                'controls': {
-                    'can_operate': True,
-                    'can_rename': permission >= 1
-                }
             }
         })
 
@@ -1196,16 +1127,6 @@ def washingMachine(request):
 
         # 处理POST请求（设备控制）
         if request.method == 'POST':
-            response_data = {
-                'status': 'success',
-                'message': '操作成功',
-                'device': {
-                    'name': wm.Device_name,
-                    'type': wm.Device_type
-                },
-                'changes': {}
-            }
-
             # 检查用户权限
             if permission < 1:
                 return JsonResponse({
@@ -1224,7 +1145,6 @@ def washingMachine(request):
                     }, status=400)
                 
                 wm.set_status(new_status)
-                response_data['changes']['status'] = new_status
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -1243,7 +1163,6 @@ def washingMachine(request):
                     }, status=400)
                 
                 wm.set_mode(new_mode)
-                response_data['changes']['mode'] = new_mode
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -1262,16 +1181,12 @@ def washingMachine(request):
                 
                 old_name = wm.Device_name
                 wm.set_name(new_name)
-                response_data['changes']['name'] = new_name
-                response_data['device']['name'] = new_name
                 Log.objects.create(
                     username=username,
                     devicename=old_name,
                     devicetype="washingMachine",
                     operation=f"重命名为 {new_name}"
                 )
-
-            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1283,11 +1198,6 @@ def washingMachine(request):
                 'status': wm.get_status(),
                 'mode': wm.get_mode(),
                 'valid_modes': ['standard', 'quick', 'delicate', 'heavy', 'wool'],
-                'controls': {
-                    'can_operate': permission >= 1,
-                    'can_change_mode': permission >= 1,
-                    'can_rename': permission >= 2
-                }
             }
         })
 
@@ -1344,16 +1254,6 @@ def robotvacuum(request):
 
         # 处理POST请求（设备控制）
         if request.method == 'POST':
-            response_data = {
-                'status': 'success',
-                'message': '操作成功',
-                'device': {
-                    'name': robot.Device_name,
-                    'type': robot.Device_type
-                },
-                'changes': {}
-            }
-
             # 检查用户权限
             if permission < 1:
                 return JsonResponse({
@@ -1372,7 +1272,6 @@ def robotvacuum(request):
                     }, status=400)
                 
                 robot.set_status(new_status)
-                response_data['changes']['status'] = new_status
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -1391,7 +1290,6 @@ def robotvacuum(request):
                     }, status=400)
                 
                 robot.set_mode(new_mode)
-                response_data['changes']['mode'] = new_mode
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -1410,8 +1308,6 @@ def robotvacuum(request):
                 
                 old_name = robot.Device_name
                 robot.set_name(new_name)
-                response_data['changes']['name'] = new_name
-                response_data['device']['name'] = new_name
                 Log.objects.create(
                     username=username,
                     devicename=old_name,
@@ -1431,11 +1327,6 @@ def robotvacuum(request):
                 'status': robot.get_status(),
                 'mode': robot.get_mode(),
                 'valid_modes': ['auto', 'spot', 'edge', 'single_room', 'mop'],
-                'controls': {
-                    'can_operate': permission >= 1,
-                    'can_change_mode': permission >= 1,
-                    'can_rename': permission >= 2
-                }
             }
         })
 

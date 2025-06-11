@@ -416,12 +416,6 @@ light：
         "type": "Light",
         "status": 1,
         "brightness": 80,
-        # 应该没用
-        "controls": {
-            "can_change_status": true,
-            "can_adjust_brightness": true,
-            "can_rename": true
-        }
     }
 }
 2. POST请求响应：
@@ -478,13 +472,7 @@ airConditioner：
         "mode": "cool",
         "valid_modes": ["cool", "heat", "dry"],
         "min_temp": 16,
-        "max_temp": 30,
-        "controls": {
-            "can_change_status": true,
-            "can_adjust_temp": true,
-            "can_change_mode": true,
-            "can_rename": true
-        }
+        "max_temp": 30
     }
 }
 #### 错误码：400、401、403、404、500
@@ -522,10 +510,6 @@ curtain:
         "name": "主卧窗帘",
         "type": "Curtain",
         "status": 1,
-        "controls": {
-            "can_operate": true,
-            "can_rename": true
-        }
     }
 }
 #### 错误码：400、401、403、404、500
@@ -566,13 +550,7 @@ washingMachine:
         "type": "WashingMachine",
         "status": 1,
         "mode": "standard",
-        "remaining_time": 45,
         "valid_modes": ["standard", "quick", "delicate", "heavy", "wool"],
-        "controls": {
-            "can_operate": true,
-            "can_change_mode": true,
-            "can_rename": false
-        }
     }
 }
 #### 错误码：400、401、403、404、500
@@ -614,11 +592,6 @@ robotvacuum:
         "status": 1,
         "mode": "sweep",
         "valid_modes": ["auto", "spot", "edge", "single_room", "mop"],
-        "controls": {
-            "can_operate": true,
-            "can_change_mode": true,
-            "can_rename": false
-        }
     }
 }
 #### 错误码：400、401、403、404、500

@@ -318,14 +318,6 @@ def add_delete(request):
             'redirect': '/login/'  # 提供前端跳转路径
         }, status=401)
     
-    # # 检查用户权限（假设只有工作人员可以访问）
-    # if request.session.get('permission') != 2:
-    #     return JsonResponse({
-    #         'status': 'error',
-    #         'message': '您没有权限访问此页面',
-    #         'redirect': '/home/'
-    #     }, status=403)
-    
     # 返回页面所需数据
     return JsonResponse({
         'status': 'success',
@@ -494,19 +486,19 @@ def delete_device(request):
         try:
             # 解析JSON数据
             data = json.loads(request.body)
-            device_ids = data.get('device_ids', [])  # 改为使用设备ID列表
+            device_names = data.get('device_names', [])  # 改为使用设备ID列表
             username = request.session.get('username')
             
-            if not device_ids:
+            if not device_names:
                 return JsonResponse({
                     'status': 'error',
                     'message': '请选择要删除的设备'
                 }, status=400)
             
             deleted_devices = []
-            for device_id in device_ids:
+            for device_name in device_names:
                 try:
-                    device = Device.objects.get(Device_id=device_id)
+                    device = Device.objects.get(Device_name=device_name)
                     device_name = device.Device_name
                     device_type = device.Device_type
                     
@@ -523,7 +515,6 @@ def delete_device(request):
                     )
                     
                     deleted_devices.append({
-                        'id': device_id,
                         'name': device_name,
                         'type': device_type
                     })
@@ -843,7 +834,7 @@ def light(request):
             if not response_data['changes']:
                 response_data['message'] = '未检测到有效修改'
 
-            return JsonResponse(response_data)
+            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1005,7 +996,7 @@ def airConditioner(request):
                     operation=f"rename to {new_name}"
                 )
 
-            return JsonResponse(response_data)
+            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1135,7 +1126,7 @@ def curtain(request):
                     operation=f"重命名为 {new_name}"
                 )
 
-            return JsonResponse(response_data)
+            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1280,7 +1271,7 @@ def washingMachine(request):
                     operation=f"重命名为 {new_name}"
                 )
 
-            return JsonResponse(response_data)
+            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1291,7 +1282,6 @@ def washingMachine(request):
                 'type': wm.Device_type,
                 'status': wm.get_status(),
                 'mode': wm.get_mode(),
-                'remaining_time': wm.get_remaining_time() if hasattr(wm, 'get_remaining_time') else None,
                 'valid_modes': ['standard', 'quick', 'delicate', 'heavy', 'wool'],
                 'controls': {
                     'can_operate': permission >= 1,
@@ -1429,7 +1419,7 @@ def robotvacuum(request):
                     operation=f"重命名为 {new_name}"
                 )
 
-            return JsonResponse(response_data)
+            # return JsonResponse(response_data)
 
         # GET请求返回设备当前状态
         return JsonResponse({
@@ -1440,8 +1430,6 @@ def robotvacuum(request):
                 'type': robot.Device_type,
                 'status': robot.get_status(),
                 'mode': robot.get_mode(),
-                'battery': robot.get_battery() if hasattr(robot, 'get_battery') else None,
-                'area_cleaned': robot.get_area_cleaned() if hasattr(robot, 'get_area_cleaned') else None,
                 'valid_modes': ['auto', 'spot', 'edge', 'single_room', 'mop'],
                 'controls': {
                     'can_operate': permission >= 1,
@@ -1653,7 +1641,6 @@ def add_habit(request):
                 'status': 'success',
                 'message': '习惯创建成功',
                 'habit': {
-                    'id': habit.id,
                     'name': habit.habit_name,
                     'device_count': len(added_devices)
                 },
@@ -1744,7 +1731,7 @@ def delete_habit(request):
                 
                 # 获取剩余习惯
                 remaining_habits = list(Habits.objects.filter(username=username).values(
-                    'id', 'habit_name', 'description'
+                    'habit_name'
                 ))
                 
                 return JsonResponse({
@@ -1767,9 +1754,8 @@ def delete_habit(request):
             habits_data.append({
                 'id': habit.id,
                 'name': habit.habit_name,
-                'description': habit.description if hasattr(habit, 'description') else '',
+                'devices': habit.favorite_devices,
                 'device_count': habit.favorite_devices.count(),
-                'created_at': habit.created_at.strftime('%Y-%m-%d %H:%M:%S')
             })
         
         return JsonResponse({

@@ -59,7 +59,7 @@ export default {
           username: this.username,
           password: this.password,
           age: this.age,
-        });
+        }, {withCredentials:true,});
 
         // 处理返回的信息
         if (response.data.status === 'success') {

@@ -31,6 +31,7 @@ register:
         "permission": 1
     }
 }
+```
 #### 错误码：400、500
 
 
@@ -61,6 +62,7 @@ login：
         "permission": 1
     }
 }
+```
 #### 错误码：400、404、500
 
 
@@ -83,6 +85,7 @@ logout：
     "status": "success",
     "message": "您已成功退出登录！"
 }
+```
 #### 错误码：400（未登录状态）、500（服务器内部错误）
 
 
@@ -110,6 +113,7 @@ change_password：
     "status": "success",
     "message": "密码修改成功，请重新登录"
 }
+```
 #### 错误码：400、404、500
 
 
@@ -141,6 +145,7 @@ home:
         ]
     }
 }
+```
 #### 错误码：401
 
 
@@ -177,7 +182,7 @@ add_delete：
         "username": "john"
     }
 }
-
+```
 #### 错误码：401
 
 
@@ -208,8 +213,9 @@ add_device：
         "type": "Light"  # 设备类型
     }
 }
-
+```
 - 请求方式：POST  
+```json
 {
     "status": "success",
     "device_types": ["Light", "WashingMachine", "Robotvacuum", "AirConditioner", "Curtain"],
@@ -219,7 +225,7 @@ add_device：
     ],
     "username": "john"
 }
-
+```
 #### 错误码：400、401、403、500
 
 
@@ -283,6 +289,7 @@ delete_device：
     ],
     "username": "john"
 }
+```
 #### 错误码：400、401、403、500
 
 query_logs：
@@ -324,7 +331,7 @@ query_logs：
         "devicenames": ["客厅灯", "主卧空调"]
     }
 }
-
+```
 #### 错误码：400、401、403、500
 
 
@@ -353,7 +360,7 @@ devices:
                 {
                     "id": 1,
                     "name": "客厅灯",
-                    "status": 0, # 0表示关闭
+                    "status": 0,  // 0表示关闭
                     "endpoint": "/api/light/"
                 }
             ]
@@ -367,7 +374,7 @@ devices:
                 {
                     "id": 2,
                     "name": "主卧空调",
-                    "status": 1, # 1表示打开
+                    "status": 1,  // 1表示打开
                     "endpoint": "/api/airConditioner/"
                 }
             ]
@@ -376,6 +383,7 @@ devices:
     "username": "john",
     "permission": 1
 }
+```
 #### 错误码：401、500
 
 
@@ -418,7 +426,9 @@ light：
         "brightness": 80,
     }
 }
+```
 2. POST请求响应：
+```json
 {
     "status": "success",
     "message": "操作成功",
@@ -431,6 +441,7 @@ light：
         "brightness": 75
     }
 }
+```
 #### 错误码：401、404、400、500
 
 
@@ -475,6 +486,7 @@ airConditioner：
         "max_temp": 30
     }
 }
+```
 #### 错误码：400、401、403、404、500
 
 curtain:
@@ -512,6 +524,7 @@ curtain:
         "status": 1,
     }
 }
+```
 #### 错误码：400、401、403、404、500
 
 
@@ -553,6 +566,7 @@ washingMachine:
         "valid_modes": ["standard", "quick", "delicate", "heavy", "wool"],
     }
 }
+```
 #### 错误码：400、401、403、404、500
 
 
@@ -594,6 +608,7 @@ robotvacuum:
         "valid_modes": ["auto", "spot", "edge", "single_room", "mop"],
     }
 }
+```
 #### 错误码：400、401、403、404、500
 
 habits：
@@ -643,6 +658,7 @@ habits：
     ],
     "username": "john"
 }
+```
 2. POST请求响应（执行习惯）：
 ```json
 {
@@ -662,6 +678,7 @@ habits：
         }
     ]
 }
+```
 #### 错误码：400、401、404、500
 
 
@@ -706,6 +723,7 @@ add_habit：
     ],
     "username": "john"
 }
+```
 2. POST请求响应（创建新习惯）：
 ```json
 {
@@ -728,6 +746,7 @@ add_habit：
         }
     ]
 }
+```
 #### 错误码：400、401、404、500
 
 
@@ -776,6 +795,7 @@ delete_habit：
     ],
     "username": "john"
 }
+```
 2. POST请求响应（删除习惯）：
 ```json
 {
@@ -790,7 +810,7 @@ delete_habit：
         }
     ]
 }
-
+```
 
 
 

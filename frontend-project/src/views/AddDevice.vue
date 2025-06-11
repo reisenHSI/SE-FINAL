@@ -56,8 +56,8 @@ export default {
       try {
         // 向后端提交设备信息
         const response = await this.$axios.post(`${API_BASE_URL}home/add_delete/add_device/`, {
-          deviceName: this.deviceName,
-          deviceType: this.deviceType
+          device_name: this.deviceName,
+          device_type: this.deviceType
         });
 
         if (response.data.status === 'success') {

@@ -55,6 +55,7 @@ pip install django-cors-headers -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 运行后端  
 ```bash
+pip install django-cors-headers==3.7.0
 cd SE
 python manage.py makemigrations
 python manage.py migrate

@@ -34,6 +34,10 @@ const routes = [
   { path: '/devices/air', name: 'AirConditioner', component: AirConditioner },
   { path: '/devices/washing-machine', name: 'WashingMachine', component: WashingMachine },
   { path: '/devices/robotvacuum', name: 'RobotVacuum', component: RobotVacuum },
+  { path: '/logs', name: 'Logs',},
+  { path: '/AddDevice', name: 'AddDevice',},
+  { path: '/DeleteDevice', name: 'DeleteDevice',},
+  { path: '/Habits', name: 'Habits',},
 
 
     // 防止路径不匹配导致页面空白

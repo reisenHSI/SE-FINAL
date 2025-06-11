@@ -1,6 +1,12 @@
 <template>
   <div class="devices-container">
     <h2 class="title">{{ titleMap[filter] }}</h2>
+
+    <div class="top-actions">
+      <button @click="goToAddDevice" class="top-btn add-btn">添加设备</button>
+      <button @click="goToDeleteDevice" class="top-btn del-btn">删除设备</button>
+    </div>
+
     <div class="device-grid">
       <div
         class="device-row"
@@ -16,8 +22,9 @@
 
         <!-- 操作按钮区域 -->
         <div class="device-actions">
-          <button @click="goToAddDevice(device)" class="action-btn add-btn">+</button>
-          <button @click="goToDeleteDevice(device)" class="action-btn del-btn">-</button>
+          <button @click="goToControlDevice(device)" class="action-btn control-btn">
+            控制
+          </button>
         </div>
       </div>
     </div>
@@ -25,6 +32,9 @@
 </template>
 
 <script>
+import axios from 'axios'
+import {API_BASE_URL} from "../main";
+
 export default {
   name: 'Devices',
   props: {
@@ -35,16 +45,7 @@ export default {
   },
   data() {
     return {
-      devices: [
-        { id: 1, type: 'light', name: '客厅灯 A', icon: '/icons/light.png' },
-        { id: 2, type: 'light', name: '卧室灯 B', icon: '/icons/light.png' },
-        { id: 3, type: 'curtain', name: '窗帘 1 号', icon: '/icons/curtain.png' },
-        { id: 4, type: 'air', name: '空调 A', icon: '/icons/air.png' },
-        { id: 5, type: 'air', name: '空调 B', icon: '/icons/air.png' },
-        { id: 6, type: 'washing', name: '洗衣机 A', icon: '/icons/washing.png' },
-        { id: 7, type: 'robot', name: '扫地机器人 1', icon: '/icons/robot.png' },
-        { id: 8, type: 'robot', name: '扫地机器人 2', icon: '/icons/robot.png' }
-      ],
+      devices: [],
       titleMap: {
         all: '全部设备',
         light: '灯光设备',
@@ -69,125 +70,118 @@ export default {
     }
   },
   methods: {
-    goToAddDevice(device) {
-      this.$router.push({ name: 'AddDevice', query: { type: device.type } })
+    async fetchDevices() {
+      try {
+        const response = await axios.get(`${API_BASE_URL}home/devices/`) // 确保路径和后端一致
+        if (response.data.status === 'success') {
+          // 后端返回的是设备类别数组，扁平化为设备列表
+          let deviceList = []
+          response.data.device_categories.forEach(category => {
+            category.devices.forEach(device => {
+              deviceList.push({
+                id: device.id,
+                name: device.name,
+                type: this.mapBackendType(category.type),
+                icon: this.getIconPath(category.icon)
+              })
+            })
+          })
+          this.devices = deviceList
+        } else {
+          this.$message.error(response.data.message || '设备获取失败')
+        }
+      } catch (error) {
+        this.$message.error('设备获取失败，请检查网络')
+      }
     },
-    goToDeleteDevice(device) {
-      this.$router.push({ name: 'DeleteDevice', query: { id: device.id, name: device.name } })
+    mapBackendType(type) {
+      // 后端传过来的类型映射为前端类型
+      const typeMap = {
+        Light: 'light',
+        Curtain: 'curtain',
+        AirConditioner: 'air',
+        WashingMachine: 'washing',
+        Robotvacuum: 'robot'
+      }
+      return typeMap[type] || 'unknown'
+    },
+    getIconPath(iconName) {
+      // 图标路径映射
+      return `/icons/${iconName}.png`
+    },
+    goToAddDevice() {
+      this.$router.push({ name: 'AddDevice' })
+    },
+    goToDeleteDevice() {
+      this.$router.push({ name: 'DeleteDevice' })
+    },
+    goToControlDevice(device) {
+      const routeMap = {
+        light: 'Light',
+        air: 'AirConditioner',
+        curtain: 'Curtain',
+        washing: 'WashingMachine',
+        robot: 'RobotVacuum'
+      }
+
+      const routeName = routeMap[device.type]
+      if (!routeName) {
+        this.$message.error('暂不支持该设备类型！')
+        return
+      }
+
+      this.$router.push({
+        name: routeName,
+        query: {
+          id: device.id,
+          name: device.name
+        }
+      })
     }
+  },
+  mounted() {
+    this.fetchDevices()
   }
 }
 </script>
 
 <style scoped>
-.devices-container {
-  flex: 1;
-  padding: 20px;
-  background-color: #f8fbff;
-}
-
-.title {
-  font-size: 20px;
-  color: #2a6ecf;
+/* 顶部操作按钮 */
+.top-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
-/* 每行一个设备和操作按钮区域，两列布局 */
-.device-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.device-row {
-  display: flex;
-  gap: 16px;
-}
-
-/* 设备卡片样式 */
-.device-card {
-  flex: 1; /* 占满剩余空间 */
-  background-color: #ffffff;
-  border: 1px solid #d0e3f1;
-  border-radius: 10px;
-  padding: 16px;
-  text-align: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 160px;
-  min-height: 140px; /* 固定高度，方便操作区高度一致 */
-  transition: transform 0.2s ease;
-}
-
-.device-card:hover {
-  transform: translateY(-4px);
-}
-
-.device-icon {
-  width: 60px;
-  height: 60px;
-  margin-bottom: 10px;
-}
-
-.device-name {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.device-info {
-  font-size: 14px;
-  color: #666;
-}
-
-/* 操作按钮区域 */
-.device-actions {
-  width: 160px; /* 宽度和设备卡片一致 */
-  min-height: 140px; /* 高度和设备卡片一致 */
-  border: 1px solid #d0e3f1;
-  border-radius: 10px;
-  background-color: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  user-select: none;
-}
-
-.action-btn {
-  width: 50px;
-  height: 50px;
+.top-btn {
+  padding: 10px 20px;
   border: none;
-  border-radius: 8px;
-  font-size: 28px;
-  font-weight: bold;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   color: white;
-  line-height: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .add-btn {
-  background-color: #2a6ecf;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
 }
 
 .add-btn:hover {
-  background-color: #1e4aad;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .del-btn {
-  background-color: #e53e3e;
+  background: linear-gradient(135deg, #ff6a6a, #ff4e50);
 }
 
 .del-btn:hover {
-  background-color: #a92a2a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
+
 </style>

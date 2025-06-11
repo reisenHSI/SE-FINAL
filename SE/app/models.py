@@ -18,6 +18,8 @@ class User(models.Model):
     
     # 修改密码
     def set_password(self, new_password):
+        if not new_password: # 如果密码为空，则返回错误信息
+            raise ValueError('密码不能为空！')
         self.password = new_password
 
     def check_password(self, new_password):
@@ -83,11 +85,15 @@ class Device(models.Model):
         self.save()
 
     def set_status(self,status):
+        if status not in [0, 1, 2]:
+            raise ValueError('无效的状态值')
         self.Device_status = status
         self.save()
 
     # 设置名字
     def set_name(self, name):
+        if not name: # 如果名字为空，则返回错误信息
+            raise ValueError('设备名不能为空！')
         self.Device_name = name
         self.save()
 
@@ -100,11 +106,19 @@ class Device(models.Model):
     
     #  修改设备名
     def change_name(self, new_name):
+        if not new_name: # 如果名字为空，则返回错误信息
+            raise ValueError('设备名不能为空！')
         self.Device_name = new_name
         self.save()
 
     # 添加设备，接口
     def add_device(self, Device_id, Device_name, Device_type, Device_status=0):
+        if not Device_name:
+            raise ValueError('设备名不能为空！')
+        if Device_type not in ['Light', 'AirConditioner', 'Curtain', 'WashingMachine', 'RobotVacuum']:
+            raise ValueError('设备类型无效！')
+        if Device_status not in [0, 1, 2]: # 状态只能是0,1,2
+            raise ValueError('设备状态无效！')
         self.Device_id = Device_id
         self.Device_name = Device_name
         self.Device_type = Device_type
@@ -130,11 +144,19 @@ class Light(Device):
     
     # 修改亮度
     def set_brightness(self, brightness):
+        if brightness < 0 or brightness > 100: # 亮度只能是0-100
+            raise ValueError('亮度只能是0-100')
         self.brightness = brightness
         self.save()
 
     # 添加设备
     def add_light(self, Device_id, Device_name, Device_status=0, brightness=50):
+        if not Device_name:
+            raise ValueError('设备名不能为空！')
+        if Device_status not in [0, 1, 2]: # 状态只能是0,1,2
+            raise ValueError('设备状态无效！')
+        if brightness < 0 or brightness > 100: # 亮度只能是0-100
+            raise ValueError('亮度只能是0-100')
         self.add_device(Device_id, Device_name, 'Light', Device_status)
         self.brightness = brightness
         self.save()
@@ -157,16 +179,26 @@ class AirConditioner(Device):
 
     # 设置模式：cool,heat,dry
     def set_mode(self, new_mode):
+        if new_mode not in ['cool', 'heat', 'auto', 'dry', 'fan']:
+            raise ValueError('无效的模式！')
         self.mode = new_mode
         self.save()
 
     # 修改温度
     def set_temperature(self, temperature):
+        if temperature < 16 or temperature > 30: # 温度只能是16-30
+            raise ValueError('温度只能是16-30')
         self.temperature = temperature
         self.save()
 
     # 添加设备
     def add_airconditioner(self, Device_id, Device_name, Device_status, temperature=25, mode='cool'):
+        if not Device_name:
+            raise ValueError('设备名不能为空！')
+        if Device_status not in [0, 1, 2]: # 状态只能是0,1,2
+            raise ValueError('设备状态无效！')
+        if temperature < 16 or temperature > 30:
+            raise ValueError('温度只能是16-30')
         self.add_device(Device_id, Device_name, 'AirConditioner', Device_status)
         self.temperature = temperature
         self.mode = mode
@@ -179,6 +211,10 @@ class Curtain(Device):
 
     #  添加窗帘
     def add_curtain(self, Device_id, Device_name, Device_status):
+        if not Device_name:
+            raise ValueError('设备名不能为空！')
+        if Device_status not in [0, 1, 2]: # 状态只能是0,1,2
+            raise ValueError('设备状态无效！')
         self.add_device(Device_id, Device_name, 'Curtain', Device_status)
         self.save()
 
@@ -195,11 +231,19 @@ class WashingMachine(Device):
 
     # 设置模式：wash，dry,fastwash
     def set_mode(self, mode):
+        if mode not in ['standard', 'quick', 'delicate', 'heavy', 'wool']:
+            raise ValueError('无效的洗衣模式！')
         self.mode = mode
         self.save()
     
     # 添加设备
     def add_washingmachine(self, Device_id, Device_name, Device_status, mode='wash'):
+        if not Device_name:
+            raise ValueError('设备名不能为空！')
+        if Device_status not in [0, 1, 2]: # 状态只能是0,1,2
+            raise ValueError('设备状态无效！')
+        if mode not in ['standard', 'quick', 'delicate', 'heavy', 'wool']:
+            raise ValueError('无效的洗衣模式！')
         self.add_device(Device_id, Device_name, 'WashingMachine', Device_status)
         self.mode = mode
         self.save()
@@ -217,11 +261,19 @@ class Robotvacuum(Device):
     
     # 设置模式：sweep，mop
     def set_mode(self, mode):
+        if mode not in ['auto', 'spot', 'edge', 'single_room', 'mop']:
+            raise ValueError('无效的清扫模式！')
         self.mode = mode
         self.save()
 
     # 添加设备
     def add_robotvacuum(self, Device_id, Device_name, Device_status, mode='clean'):
+        if not Device_name:
+            raise ValueError('设备名不能为空！')
+        if Device_status not in [0, 1, 2]: # 状态只能是0,1,2
+            raise ValueError('设备状态无效！')
+        if mode not in ['auto', 'spot', 'edge', 'single_room', 'mop']:
+            raise ValueError('无效的清扫模式！')
         self.add_device(Device_id, Device_name, 'RobotVacuum', Device_status)
         self.mode = mode
         self.save()
@@ -240,17 +292,4 @@ class Habits(models.Model):
     def __str__(self):
         return self.habit_name
     
-    #  用户添加习惯
-    def add_favorite_device(self, device):
-        if device not in self.favorite_devices.all():
-            self.favorite_devices.add(device)
-
-    # 用户删除习惯
-    def remove_favorite_device(self, device):
-        if device in self.favorite_devices.all():
-            self.favorite_devices.remove(device)
-
-    # 获取当前habit的所有常用设备
-    def get_habits(self):
-        return self.favorite_devices.all()
     

@@ -3,13 +3,22 @@
     <h2 class="title">{{ titleMap[filter] }}</h2>
     <div class="device-grid">
       <div
-        class="device-card"
+        class="device-row"
         v-for="device in filteredDevices"
         :key="device.id"
       >
-        <img :src="device.icon" class="device-icon" alt="icon" />
-        <p class="device-name">{{ device.name }}</p>
-        <p class="device-info">类型：{{ typeMap[device.type] }}</p>
+        <!-- 设备信息区域 -->
+        <div class="device-card">
+          <img :src="device.icon" class="device-icon" alt="icon" />
+          <p class="device-name">{{ device.name }}</p>
+          <p class="device-info">类型：{{ typeMap[device.type] }}</p>
+        </div>
+
+        <!-- 操作按钮区域 -->
+        <div class="device-actions">
+          <button @click="goToAddDevice(device)" class="action-btn add-btn">+</button>
+          <button @click="goToDeleteDevice(device)" class="action-btn del-btn">-</button>
+        </div>
       </div>
     </div>
   </div>
@@ -58,6 +67,14 @@ export default {
       if (this.filter === 'all') return this.devices
       return this.devices.filter(d => d.type === this.filter)
     }
+  },
+  methods: {
+    goToAddDevice(device) {
+      this.$router.push({ name: 'AddDevice', query: { type: device.type } })
+    },
+    goToDeleteDevice(device) {
+      this.$router.push({ name: 'DeleteDevice', query: { id: device.id, name: device.name } })
+    }
   }
 }
 </script>
@@ -75,19 +92,33 @@ export default {
   margin-bottom: 20px;
 }
 
+/* 每行一个设备和操作按钮区域，两列布局 */
 .device-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
+.device-row {
+  display: flex;
+  gap: 16px;
+}
+
+/* 设备卡片样式 */
 .device-card {
+  flex: 1; /* 占满剩余空间 */
   background-color: #ffffff;
   border: 1px solid #d0e3f1;
   border-radius: 10px;
   padding: 16px;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  min-height: 140px; /* 固定高度，方便操作区高度一致 */
   transition: transform 0.2s ease;
 }
 
@@ -105,10 +136,58 @@ export default {
   font-size: 16px;
   font-weight: bold;
   color: #333;
+  margin-bottom: 4px;
 }
 
 .device-info {
   font-size: 14px;
   color: #666;
+}
+
+/* 操作按钮区域 */
+.device-actions {
+  width: 160px; /* 宽度和设备卡片一致 */
+  min-height: 140px; /* 高度和设备卡片一致 */
+  border: 1px solid #d0e3f1;
+  border-radius: 10px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  user-select: none;
+}
+
+.action-btn {
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 8px;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  color: white;
+  line-height: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.add-btn {
+  background-color: #2a6ecf;
+}
+
+.add-btn:hover {
+  background-color: #1e4aad;
+}
+
+.del-btn {
+  background-color: #e53e3e;
+}
+
+.del-btn:hover {
+  background-color: #a92a2a;
 }
 </style>

@@ -69,6 +69,7 @@ def register(request):
                 username=username,
                 password=make_password(password),
                 phone=phone,
+                age = int(age),
                 User_id=User.objects.count() + 1,
                 permission=permission
             )

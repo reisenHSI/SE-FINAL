@@ -5,7 +5,7 @@
     </div>
     <div class="right">
       <span class="username">欢迎，{{ username }}</span>
-      <button @click="goToDevices">设备管理</button>
+      <button @click="goHome">主页</button>
       <button @click="goToLogs">日志查询</button>
       <button @click="triggerOneKeyOpen">一键开启</button>
       <button class="logout-btn" @click="logout">退出登录</button>
@@ -25,14 +25,13 @@ export default {
     logout() {
       // 清除 token 等登录信息
       localStorage.removeItem('token')
-      // localStorage.removeItem('token')
       this.$router.push('/login')
     },
-    goToDevices() {
-      this.$router.push('/device-manage')
+    goHome() {
+      this.$router.push('/home')
     },
     goToLogs() {
-      this.$router.push('/log')
+      this.$router.push('/logs')
     },
     triggerOneKeyOpen() {
       // 你可以用 emit 或 Vuex 通知主组件执行操作

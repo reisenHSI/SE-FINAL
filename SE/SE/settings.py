@@ -25,7 +25,7 @@ SECRET_KEY = '_sq2yuk+d3y9qg-c&(3&mv^e!aa2te_#iw6qgelh59^^-kym6+'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,18 +37,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-<<<<<<< HEAD
+    'corsheaders',      # 添加coreheaders
     'app'
-=======
-    'app',
->>>>>>> c9183904b175861cd2f5dfc1832ccb1244957a4f
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',    # 添加coreheaders
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -117,6 +115,20 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+# 跨域配置  
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SECURE = False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8085",    # vue 前端应用地址
+    'http://127.0.0.1:8000',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8085',
+    'http://127.0.0.1:8000',
+]
 
 
 # Static files (CSS, JavaScript, Images)

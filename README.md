@@ -40,7 +40,16 @@ DevicesDetail实现跳转到具体设备的逻辑
 
 Light等具体设备的逻辑
 
-添加/删除设备的逻辑
+添加/删除设备的逻辑  
+
+# 配置  
+后端: Django  
+前端: Vue  
+
+为了解决跨域问题, 需要下载`django-cors-headers`包:  
+```bash
+pip install django-cors-headers -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
 
 # 运行:  
 

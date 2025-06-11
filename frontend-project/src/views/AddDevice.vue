@@ -1,6 +1,6 @@
 <template>
   <div class="add-device-container">
-    <h2>添加设备 - {{ deviceTypeName }}</h2>
+    <h2>添加设备</h2>
     <form @submit.prevent="submitForm">
       <div class="form-group">
         <label for="deviceName">设备名称：</label>
@@ -15,52 +15,61 @@
 
       <div class="form-group">
         <label for="deviceType">设备类型：</label>
-        <input
-          id="deviceType"
-          v-model="deviceType"
-          type="text"
-          readonly
-        />
+        <select id="deviceType" v-model="deviceType" required>
+          <option disabled value="">请选择设备类型</option>
+          <option v-for="(name, type) in deviceTypes" :key="type" :value="type">
+            {{ name }}
+          </option>
+        </select>
       </div>
 
-      <button type="submit">添加设备</button>
+      <button type="submit" class="submit-btn">添加设备</button>
     </form>
   </div>
 </template>
 
 <script>
+import {API_BASE_URL} from "../main";
+
 export default {
   name: "AddDevices",
   data() {
     return {
-      deviceType: this.$route.query.type || "未知类型",
-      deviceName: ""
+      deviceName: "",
+      deviceType: "",
+      deviceTypes: {
+        Light: "灯光",
+        Curtain: "窗帘",
+        AirConditioner: "空调",
+        WashingMachine: "洗衣机",
+        Robotvacuum: "扫地机器人"
+      }
     };
   },
-  computed: {
-    deviceTypeName() {
-      const map = {
-        light: "灯光",
-        curtain: "窗帘",
-        air: "空调",
-        washing: "洗衣机",
-        robot: "扫地机器人"
-      };
-      return map[this.deviceType] || this.deviceType;
-    }
-  },
   methods: {
-    submitForm() {
+    async submitForm() {
       if (!this.deviceName.trim()) {
         alert("设备名称不能为空");
         return;
       }
 
-      // 这里写调用后端接口的代码
-      alert(`添加设备: ${this.deviceName} (${this.deviceType})`);
+      try {
+        // 向后端提交设备信息
+        const response = await this.$axios.post(`${API_BASE_URL}home/add_delete/add_device/`, {
+          deviceName: this.deviceName,
+          deviceType: this.deviceType
+        });
 
-      // 提交成功后可以跳转回设备列表
-      this.$router.push({ name: "Devices", query: { filter: this.deviceType } });
+        if (response.data.status === 'success') {
+          alert('设备添加成功！');
+          this.$router.push({ name: 'Devices', query: { filter: this.deviceType } });
+        } else {
+          alert(`添加失败：${response.data.message}`);
+        }
+      } catch (error) {
+        alert('添加设备失败，请稍后重试');
+        console.error(error);
+      }
     }
   }
 };
@@ -68,58 +77,60 @@ export default {
 
 <style scoped>
 .add-device-container {
-  max-width: 400px;
+  max-width: 500px;
   margin: 40px auto;
   padding: 20px;
-  background: #f8fbff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(42, 110, 207, 0.2);
+  background-color: #f8fbff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 h2 {
+  text-align: center;
   color: #2a6ecf;
   margin-bottom: 20px;
-  text-align: center;
 }
 
 .form-group {
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 20px;
 }
 
 label {
-  margin-bottom: 6px;
-  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
   color: #333;
 }
 
-input[type="text"] {
-  padding: 8px 12px;
+input, select {
+  width: 100%;
+  padding: 10px 14px;
   border: 1px solid #d0e3f1;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 16px;
 }
 
-input[readonly] {
-  background-color: #eee;
-  cursor: not-allowed;
+input:focus, select:focus {
+  outline: none;
+  border-color: #2a6ecf;
 }
 
-button {
+.submit-btn {
   width: 100%;
-  padding: 12px 0;
-  background-color: #2a6ecf;
+  padding: 12px;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
   color: white;
-  font-weight: 700;
-  font-size: 18px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-button:hover {
-  background-color: #1e4aad;
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 </style>
+

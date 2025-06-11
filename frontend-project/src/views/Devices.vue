@@ -33,6 +33,7 @@
 
 <script>
 import axios from 'axios'
+import {API_BASE_URL} from "../main";
 
 export default {
   name: 'Devices',
@@ -71,7 +72,7 @@ export default {
   methods: {
     async fetchDevices() {
       try {
-        const response = await axios.get('{API_BASE_URL}home/devices/') // 确保路径和后端一致
+        const response = await axios.get(`${API_BASE_URL}home/devices/`) // 确保路径和后端一致
         if (response.data.status === 'success') {
           // 后端返回的是设备类别数组，扁平化为设备列表
           let deviceList = []

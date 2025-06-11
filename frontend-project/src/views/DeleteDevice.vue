@@ -3,7 +3,7 @@
     <h1>删除设备</h1>
     <form @submit.prevent="deleteDevices">
       <ul>
-        <li v-for="device in devices" :key="device.id">
+        <li v-for="device in devices" :key="device.device_name">
           <input type="checkbox" :value="device.name" v-model="selectedDevices" />
           {{ device.name }} ({{ device.type }})
         </li>

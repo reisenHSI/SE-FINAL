@@ -44,7 +44,7 @@ export default {
       confirmPassword: '',
       errorMessage: "",
       phone: "",
-      age: 0,
+      age: "",
       isSubmitting: false
     }
   },

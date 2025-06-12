@@ -377,7 +377,9 @@ def add_device(request):
             }
 
             if device_type in device_models:
+                max_id = Device.objects.aggregate(max_id=Max('Device_id'))['max_id'] or 0
                 new_device = device_models[device_type].objects.create(
+                    Device_id=max_id + 1,
                     Device_name=device_name,
                     Device_type=device_type
                 )
@@ -426,7 +428,7 @@ def add_device(request):
         'status': 'success',
         'device_types': device_types,
         'devices': devices,
-        'username': username
+        # 'username': username
     })
 
 """
@@ -513,7 +515,7 @@ def delete_device(request):
     return JsonResponse({
         'status': 'success',
         'devices': devices,
-        'username': username
+        # 'username': username
     })
 
 """
@@ -542,7 +544,7 @@ def query_logs(request):
             
             # 获取筛选参数
             filters = {
-                'username': data.get('username'),
+                'username': data.get('check_username'),
                 'devicename': data.get('devicename'),
                 'start_time': data.get('start_time'),
                 'end_time': data.get('end_time')
@@ -695,13 +697,17 @@ def devices(request):
 def light(request):
     try:
         # 获取设备名称
-        if request.method == 'GET':
-            device_name = request.GET.get('device_name')
-        else:
+        # if request.method == 'GET':
+        #     device_name = request.GET.get('device_name')
+        # else:
+        #     data = json.loads(request.body) if request.body else {}
+        #     device_name = data.get('device_name')
+        #     username = data.get('username')
+        if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
             username = data.get('username')
-
+        
         if not device_name:
             return JsonResponse({
                 'status': 'error',

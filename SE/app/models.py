@@ -7,7 +7,7 @@ from django.contrib.auth.hashers import make_password, check_password
 """
 class User(models.Model):
     username = models.CharField(max_length=20) # 用户名
-    password = models.CharField(max_length=20) # 密码
+    password = models.CharField(max_length=100) # 密码
     phone = models.CharField(max_length=20) # 电话号码
     age = models.IntegerField() # 年龄
     User_id = models.IntegerField(primary_key=True) # 用户id——主键

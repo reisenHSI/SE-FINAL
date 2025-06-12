@@ -325,6 +325,15 @@ query_logs：
             "operation": "add",
             "timestamp": "2023-10-01 14:30:22",
             "formatted_operation": "john add 客厅灯(Light)"
+        },
+        {
+            "id": 2,
+            "username": "mary",
+            "device_name": "主卧空调",
+            "device_type": "Airconditioner",
+            "operation": "delete",
+            "timestamp": "2023-10-02 16:30:22",
+            "formatted_operation": "mary delete 主卧空调(Airconditioner)"
         }
     ],
     "total_count": 15,

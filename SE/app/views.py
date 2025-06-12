@@ -1070,8 +1070,10 @@ def washingMachine(request):
                     }, status=400)
                 
                 new_status = int(new_status)
+                # 打开时，设置开始时间
                 if new_status == 1:
                     wm.set_starttime(timezone.now())
+                
                 wm.set_status(new_status)
                 Log.objects.create(
                     username=username,
@@ -1125,6 +1127,7 @@ def washingMachine(request):
                 'type': wm.Device_type,
                 'status': wm.get_status(),
                 'mode': wm.get_mode(),
+                'starttime':  wm.get_starttime(),
                 'valid_modes': ['standard', 'quick', 'delicate', 'heavy', 'wool'],
             }
         })

@@ -80,7 +80,6 @@ export default {
     async fetchDevices() {
       try {
         const response = await axios.post(`${API_BASE_URL}home/devices/`, { username: localStorage.getItem('username') })
-        console.log(response)
 
         if (response.data.status === 'success') {
           let deviceList = []
@@ -144,7 +143,7 @@ export default {
         query: {
           id: device.id,
           name: device.name
-        }
+        },
       })
     }
   },

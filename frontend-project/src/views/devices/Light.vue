@@ -30,19 +30,12 @@
     <!-- 控制区域 -->
     <div class="flex flex-col items-center space-y-8 w-full max-w-md">
       <!-- 拨动开关 -->
-      <div class="flex items-center space-x-4">
-        <span class="text-xl font-semibold">{{ device.status === '1' ? '开' : '关' }}</span>
-        <div
-          class="w-16 h-8 flex items-center bg-gray-300 rounded-full p-1 cursor-pointer transition-colors duration-300"
-          :class="device.status === '1' ? 'bg-green-400' : 'bg-gray-400'"
-          @click="toggleLight"
-        >
-          <div
-            class="bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300"
-            :class="device.status === '1' ? 'translate-x-8' : 'translate-x-0'"
-          ></div>
-        </div>
-      </div>
+      <button
+  @click="toggleLight"
+  class="px-6 py-3 bg-blue-500 text-white rounded-full shadow-lg transform transition active:scale-95 hover:bg-blue-600"
+>
+  {{ device.status === '1' ? '关闭灯光' : '打开灯光' }}
+</button>
 
       <!-- 亮度滑块 -->
       <div class="w-full flex flex-col items-center">

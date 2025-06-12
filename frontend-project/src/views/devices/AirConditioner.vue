@@ -115,7 +115,9 @@ const modeLabels = {
 
 const fetchDeviceInfo = async () => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { params: { device_name: deviceName } })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
+      username: localStorage.getItem('username'),
+      device_name: deviceName })
     if (response.data.status === 'success') {
       device.value = response.data.device
     } else {
@@ -129,7 +131,11 @@ const fetchDeviceInfo = async () => {
 const togglePower = async () => {
   try {
     const newStatus = device.value.status === '1' ? '0' : '1'
-    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_status: newStatus })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
+      username: localStorage.getItem('username'),
+      device_name: device.value.name,
+      new_status: newStatus
+    })
     if (response.data.status === 'success') {
       device.value.status = newStatus
     } else {
@@ -143,7 +149,11 @@ const togglePower = async () => {
 const changeTemperature = async (newTemp) => {
   if (newTemp < 16 || newTemp > 30) return alert('温度必须在 16-30℃')
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_temperature: newTemp })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
+      username: localStorage.getItem('username'),
+      device_name: device.value.name,
+      new_temperature: newTemp
+    })
     if (response.data.status === 'success') {
       device.value.temperature = newTemp
     } else {
@@ -156,7 +166,10 @@ const changeTemperature = async (newTemp) => {
 
 const changeMode = async (mode) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_mode: mode })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
+      username: localStorage.getItem('username'),
+      device_name: device.value.name,
+      new_mode: mode })
     if (response.data.status === 'success') {
       device.value.mode = mode
     } else {
@@ -171,7 +184,11 @@ const renameDevice = async () => {
   const newName = prompt('请输入新的设备名称', device.value.name)
   if (!newName) return
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_name: newName })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
+      username: localStorage.getItem('username'),
+      device_name: device.value.name,
+      new_name: newName
+    })
     if (response.data.status === 'success') {
       device.value.name = newName
       alert('重命名成功')

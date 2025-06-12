@@ -1,5 +1,14 @@
 <template>
   <div class="flex flex-col items-center justify-center h-screen bg-gray-100" v-if="isLoaded">
+    <!-- 返回按钮 -->
+    <div class="w-full max-w-md px-4 py-2 flex justify-start">
+      <button
+        @click="goBack"
+        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg shadow-sm"
+      >
+        返回
+      </button>
+    </div>
     <!-- 设备信息 -->
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
@@ -33,18 +42,18 @@
         <option v-for="mode in device.valid_modes" :key="mode" :value="mode">{{ mode }}</option>
       </select>
 
-      <!-- 重命名输入框 -->
+      <!-- 重命名输入框（包裹在边框内） -->
       <div class="w-full flex flex-col items-center mt-4">
         <label class="text-lg font-semibold mb-2">重命名设备</label>
-        <div class="flex w-full space-x-4">
+        <div class="flex w-full max-w-md border border-gray-400 rounded-lg overflow-hidden">
           <input
             type="text"
             v-model="newDeviceName"
             placeholder="输入新设备名称"
-            class="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="flex-1 p-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
-            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition shadow"
+            class="px-4 bg-yellow-500 text-white hover:bg-yellow-600 transition"
             @click="renameDevice"
           >
             确认
@@ -158,7 +167,9 @@ const renameDevice = async () => {
     alert('设备名称不能为空')
   }
 }
-
+const goBack = () => {
+  this.$router.push('/home')
+}
 onMounted(() => {
   fetchRobotVacuum()
 })

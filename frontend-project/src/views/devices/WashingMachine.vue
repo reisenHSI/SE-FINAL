@@ -1,5 +1,14 @@
 <template>
   <div v-if="isLoaded" class="flex flex-col items-center justify-center h-screen bg-gray-100">
+    <!-- 返回按钮 -->
+    <div class="w-full max-w-md px-4 py-2 flex justify-start">
+      <button
+        @click="goBack"
+        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg shadow-sm"
+      >
+        返回
+      </button>
+    </div>
     <!-- 设备信息 -->
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
@@ -31,13 +40,25 @@
       >
         <option v-for="mode in device.valid_modes" :key="mode" :value="mode">{{ mode }}</option>
       </select>
+    </div>
 
-      <button
-        @click="renameDevice"
-        class="px-6 py-3 bg-green-500 text-white rounded-full shadow-lg transform transition active:scale-95"
-      >
-        修改设备名称
-      </button>
+    <!-- 重命名输入框 -->
+    <div class="mt-6 w-full max-w-md">
+      <label class="block text-lg font-semibold mb-2">重命名设备</label>
+      <div class="relative">
+        <input
+          v-model="newDeviceName"
+          type="text"
+          placeholder="输入新设备名称"
+          class="w-full p-2 pr-20 rounded-lg border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <button
+          @click="renameDevice"
+          class="absolute right-1 top-1/2 transform -translate-y-1/2 px-4 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition"
+        >
+          确认
+        </button>
+      </div>
     </div>
   </div>
 
@@ -51,12 +72,13 @@
 import { ref, onMounted } from 'vue'
 import { API_BASE_URL } from "../../main"
 import axios from 'axios'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
-const deviceName = route.query.name
+const router = useRouter()
 
-// 初始化默认设备对象，防止 controls undefined
+const deviceName = route.query.name || ''
+
 const device = ref({
   name: '',
   mode: '',
@@ -67,6 +89,8 @@ const isRunning = ref(false)
 const selectedMode = ref('')
 const isLoaded = ref(false)
 
+const newDeviceName = ref('')
+
 const fetchWashingMachine = async () => {
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
@@ -76,8 +100,9 @@ const fetchWashingMachine = async () => {
 
     if (response.data.status === 'success') {
       device.value = response.data.device
-      isRunning.value = response.data.device.status === 1
+      isRunning.value = response.data.device.status === 1 || response.data.device.status === '1'
       selectedMode.value = response.data.device.mode
+      newDeviceName.value = response.data.device.name // 初始化输入框
     } else {
       alert(response.data.message)
     }
@@ -94,7 +119,7 @@ const toggleWashingMachine = async () => {
     const newStatus = isRunning.value ? '0' : '1'
     const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
       username: localStorage.getItem('username'),
-      device_name: deviceName,
+      device_name: device.value.name,
       new_status: newStatus
     })
 
@@ -113,7 +138,7 @@ const changeMode = async () => {
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
       username: localStorage.getItem('username'),
-      device_name: deviceName,
+      device_name: device.value.name,
       new_mode: selectedMode.value
     })
 
@@ -129,27 +154,39 @@ const changeMode = async () => {
 }
 
 const renameDevice = async () => {
-  const newName = prompt('请输入新的设备名称', device.value.name)
-  if (newName && newName.trim() !== '') {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
-        username: localStorage.getItem('username'),
-        device_name: deviceName,
-        new_name: newName
-      })
+  const trimmedName = newDeviceName.value.trim()
+  if (!trimmedName) {
+    alert('设备名称不能为空')
+    return
+  }
+  if (trimmedName === device.value.name) {
+    alert('设备名称未更改')
+    return
+  }
 
-      if (response.data.status === 'success') {
-        device.value.name = newName
-      } else {
-        alert(response.data.message)
-      }
-    } catch (error) {
-      console.error(error)
-      alert('重命名失败')
+  try {
+    const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
+      username: localStorage.getItem('username'),
+      device_name: device.value.name,
+      new_name: trimmedName
+    })
+
+    if (response.data.status === 'success') {
+      device.value.name = trimmedName
+      // 同步路由参数，保持地址栏和设备名一致
+      router.replace({ query: { ...route.query, name: trimmedName } })
+      alert('重命名成功')
+    } else {
+      alert(response.data.message)
     }
+  } catch (error) {
+    console.error(error)
+    alert('重命名失败')
   }
 }
-
+const goBack = () => {
+  this.$router.push('/home')
+}
 onMounted(() => {
   fetchWashingMachine()
 })

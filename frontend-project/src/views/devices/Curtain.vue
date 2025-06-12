@@ -1,5 +1,14 @@
 <template>
   <div class="flex flex-col items-center justify-center h-screen bg-blue-100">
+    <!-- 返回按钮 -->
+    <div class="w-full max-w-md px-4 py-2 flex justify-start">
+      <button
+        @click="goBack"
+        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg shadow-sm"
+      >
+        返回
+      </button>
+    </div>
     <!-- 设备信息 -->
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
@@ -60,6 +69,7 @@ const deviceName = route.query.name || '默认设备名'
 
 const device = ref({})
 const isOpen = ref(false)
+const newDeviceName = ref('')
 
 const fetchCurtain = async () => {
   try {
@@ -101,29 +111,33 @@ const toggleCurtain = async () => {
   }
 }
 
-// 重命名功能
+// 重命名设备
 const renameDevice = async () => {
-  const newName = prompt('请输入新的设备名称', device.value.name)
-  if (!newName) return
+  if (!newDeviceName.value.trim()) {
+    alert('设备名称不能为空')
+    return
+  }
 
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/curtain/`, {
       username: localStorage.getItem('username'),
       device_name: deviceName,
-      new_name: newName
+      new_name: newDeviceName.value
     })
     if (response.data.status === 'success') {
-      device.value.name = newName
+      device.value.name = newDeviceName.value
       alert('重命名成功')
+      newDeviceName.value = ''
     } else {
       alert(response.data.message)
     }
   } catch (error) {
-    console.error(error)
     alert('重命名失败')
   }
 }
-
+const goBack = () => {
+  this.$router.push('/home')
+}
 onMounted(() => {
   fetchCurtain()
 })

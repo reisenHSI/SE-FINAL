@@ -1,5 +1,14 @@
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen bg-gray-200 p-4">
+    <!-- 返回按钮 -->
+    <div class="w-full max-w-md px-4 py-2 flex justify-start">
+      <button
+        @click="goBack"
+        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg shadow-sm"
+      >
+        返回
+      </button>
+    </div>
     <!-- 设备信息 -->
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
@@ -11,21 +20,26 @@
     <div class="flex items-center justify-center w-full mb-10" style="height: 50vh;">
       <div
         :class="[
-          'transition-all duration-500 ease-in-out rounded-full shadow-lg flex items-center justify-center',
-          device.status === '1' ? 'bg-yellow-400' : 'bg-gray-400'
+          'transition-all duration-500 ease-in-out rounded-full shadow-lg flex items-center justify-center'
         ]"
-        style="width: 50%; height: 100%;"
+        :style="{
+          width: '50%',
+          height: '100%',
+          backgroundColor: device.status === '1' ? '#facc15' : '#9ca3af', // yellow-400 or gray-400
+          filter: device.status === '1' ? `brightness(${device.brightness / 200 + 0.5})` : 'brightness(0.7)'
+        }"
       >
         <div
           :class="[
             'text-[10rem] transition-transform duration-500',
-            device.status === '1' ? 'scale-110 brightness-125' : 'scale-90 brightness-75'
+            device.status === '1' ? 'scale-110' : 'scale-90'
           ]"
         >
           💡
         </div>
       </div>
     </div>
+
 
     <!-- 控制区域 -->
     <div class="flex flex-col items-center space-y-8 w-full max-w-md">
@@ -172,7 +186,9 @@ const renameDevice = async () => {
     alert('重命名失败')
   }
 }
-
+const goBack = () => {
+  this.$router.push('/home')
+}
 onMounted(() => {
   fetchDeviceInfo()
 })

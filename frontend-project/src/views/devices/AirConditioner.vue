@@ -1,5 +1,14 @@
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-100 to-white p-4">
+    <!-- 返回按钮 -->
+    <div class="w-full max-w-md px-4 py-2 flex justify-start">
+      <button
+        @click="goBack"
+        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg shadow-sm"
+      >
+        返回
+      </button>
+    </div>
     <!-- 设备信息 -->
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
@@ -14,15 +23,15 @@
       <div
         :class="[
           'transition-all duration-500 ease-in-out flex flex-col items-center justify-center text-9xl',
-          device.status === '1' ? 'text-blue-400' : 'text-gray-400'
+          device.status === STATUS_ON ? modeColors[device.mode].icon : 'text-gray-400'
         ]"
       >
-        ❄️
+        {{ modeIcons[device.mode] }}
         <!-- 吹风动画 -->
-        <div v-if="device.status === '1'" class="mt-4 flex space-x-2">
-          <div class="w-2 h-10 bg-blue-300 animate-wind"></div>
-          <div class="w-2 h-10 bg-blue-300 animate-wind delay-200"></div>
-          <div class="w-2 h-10 bg-blue-300 animate-wind delay-400"></div>
+        <div v-if="device.status === STATUS_ON" class="mt-4 flex space-x-2">
+          <div :class="['w-2 h-10', modeColors[device.mode].wind, 'animate-wind']"></div>
+          <div :class="['w-2 h-10', modeColors[device.mode].wind, 'animate-wind delay-200']"></div>
+          <div :class="['w-2 h-10', modeColors[device.mode].wind, 'animate-wind delay-400']"></div>
         </div>
       </div>
     </div>
@@ -34,19 +43,21 @@
         @click="togglePower"
         class="w-24 h-12 bg-red-500 rounded-full text-lg font-semibold shadow-md active:scale-95 transition transform"
       >
-        {{ device.status === '1' ? '关闭' : '开启' }}
+        {{ device.status === STATUS_ON ? '关闭' : '开启' }}
       </button>
 
       <!-- 温度调节 -->
       <div class="flex items-center space-x-4">
         <button
           @click="changeTemperature(device.temperature - 1)"
-          class="w-12 h-12 bg-gray-600 rounded-full text-2xl active:scale-95 transition transform"
+          :disabled="device.temperature <= MIN_TEMP"
+          class="w-12 h-12 bg-gray-600 rounded-full text-2xl active:scale-95 transition transform disabled:opacity-50 disabled:cursor-not-allowed"
         >-</button>
         <span class="text-2xl">{{ device.temperature }}°C</span>
         <button
           @click="changeTemperature(device.temperature + 1)"
-          class="w-12 h-12 bg-gray-600 rounded-full text-2xl active:scale-95 transition transform"
+          :disabled="device.temperature >= MAX_TEMP"
+          class="w-12 h-12 bg-gray-600 rounded-full text-2xl active:scale-95 transition transform disabled:opacity-50 disabled:cursor-not-allowed"
         >+</button>
       </div>
 
@@ -65,18 +76,19 @@
         </button>
       </div>
 
-      <!-- 重命名输入框 -->
-      <div class="w-full flex flex-col items-center">
+      <!-- 重命名输入框（按钮在输入框内部） -->
+      <div class="w-full flex flex-col items-center mt-4">
         <label class="text-lg font-semibold mb-2">重命名设备</label>
-        <div class="flex w-full space-x-4">
+
+        <div class="relative w-full max-w-md">
           <input
             type="text"
             v-model="newDeviceName"
             placeholder="输入新设备名称"
-            class="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="w-full p-2 pr-16 rounded-lg border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
-            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition shadow"
+            class="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition"
             @click="renameDevice"
           >
             确认
@@ -90,47 +102,76 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { API_BASE_URL } from "../../main";
 
 const route = useRoute()
+const router = useRouter()
+
 const deviceName = route.query.name || '默认空调设备'
+
+const STATUS_ON = '1'
+const STATUS_OFF = '0'
+const MIN_TEMP = 16
+const MAX_TEMP = 30
 
 const device = ref({
   id: null,
   name: '',
   type: '',
-  status: '0',
+  status: STATUS_OFF,
   temperature: 24,
   mode: 'cool',
   valid_modes: [],
   controls: {}
 })
 
+const newDeviceName = ref('')
+
 const modeLabels = {
   cool: '制冷',
   heat: '制热',
-  dry: '除湿'
+  auto: '自动',
+  dry: '除湿',
+  fan: '送风'
+}
+
+const modeIcons = {
+  cool: '❄️',
+  heat: '🔥',
+  dry: '💧',
+  auto: '🌈',
+  fan: '🌀'
+}
+
+const modeColors = {
+  cool: { icon: 'text-blue-400', wind: 'bg-blue-300' },
+  heat: { icon: 'text-red-400', wind: 'bg-red-300' },
+  dry: { icon: 'text-teal-400', wind: 'bg-teal-300' },
+  auto: { icon: 'text-purple-400', wind: 'bg-purple-300' },
+  fan: { icon: 'text-yellow-400', wind: 'bg-yellow-300' }
 }
 
 const fetchDeviceInfo = async () => {
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
       username: localStorage.getItem('username'),
-      device_name: deviceName })
+      device_name: deviceName
+    })
     if (response.data.status === 'success') {
       device.value = response.data.device
     } else {
       alert(response.data.message)
     }
   } catch (error) {
+    console.error(error)
     alert('获取设备信息失败')
   }
 }
 
 const togglePower = async () => {
   try {
-    const newStatus = device.value.status === '1' ? '0' : '1'
+    const newStatus = device.value.status === STATUS_ON ? STATUS_OFF : STATUS_ON
     const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
       username: localStorage.getItem('username'),
       device_name: device.value.name,
@@ -142,12 +183,16 @@ const togglePower = async () => {
       alert(response.data.message)
     }
   } catch (error) {
+    console.error(error)
     alert('切换状态失败')
   }
 }
 
 const changeTemperature = async (newTemp) => {
-  if (newTemp < 16 || newTemp > 30) return alert('温度必须在 16-30℃')
+  if (newTemp < MIN_TEMP || newTemp > MAX_TEMP) {
+    alert(`温度必须在 ${MIN_TEMP}-${MAX_TEMP}℃`)
+    return
+  }
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
       username: localStorage.getItem('username'),
@@ -160,6 +205,7 @@ const changeTemperature = async (newTemp) => {
       alert(response.data.message)
     }
   } catch (error) {
+    console.error(error)
     alert('调整温度失败')
   }
 }
@@ -169,37 +215,47 @@ const changeMode = async (mode) => {
     const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
       username: localStorage.getItem('username'),
       device_name: device.value.name,
-      new_mode: mode })
+      new_mode: mode
+    })
     if (response.data.status === 'success') {
       device.value.mode = mode
     } else {
       alert(response.data.message)
     }
   } catch (error) {
+    console.error(error)
     alert('切换模式失败')
   }
 }
 
 const renameDevice = async () => {
-  const newName = prompt('请输入新的设备名称', device.value.name)
-  if (!newName) return
+  if (!newDeviceName.value.trim()) {
+    alert('设备名称不能为空')
+    return
+  }
+
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
       username: localStorage.getItem('username'),
       device_name: device.value.name,
-      new_name: newName
+      new_name: newDeviceName.value
     })
     if (response.data.status === 'success') {
-      device.value.name = newName
+      device.value.name = newDeviceName.value
+      router.replace({ query: { name: newDeviceName.value } }) // 同步路由参数
       alert('重命名成功')
+      newDeviceName.value = ''
     } else {
       alert(response.data.message)
     }
   } catch (error) {
+    console.error(error)
     alert('重命名失败')
   }
 }
-
+const goBack = () => {
+  this.$router.push('/home')
+}
 onMounted(() => {
   fetchDeviceInfo()
 })

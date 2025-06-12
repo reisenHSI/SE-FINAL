@@ -723,12 +723,7 @@ def light(request):
                     }, status=400)
                 
                 new_status = int(new_status)
-                print(f"device_name: {device_name}")
-                print(f"username: {username}")
-                print(type(new_status))
-                print(new_status)
                 light.set_status(new_status)
-                print(111)
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
@@ -736,14 +731,7 @@ def light(request):
                     operation='turn on' if new_status == 1 else 'turn off',
                     timestamp=timezone.now()
                 )
-                print(222)
-                # Log.objects.create(
-                #     username=username,
-                #     devicename=device_name,
-                #     devicetype=device_type,
-                #     operation='delete',
-                #     timestamp=timezone.now()
-                # )
+
             # 处理亮度变更
             if 'new_brightness' in data:
                 new_brightness = int(data['new_brightness'])
@@ -815,17 +803,12 @@ def light(request):
 """
 def airConditioner(request):
     try:
-        # 获取设备名称
-        # if request.method == 'GET':
-        #     device_name = request.GET.get('device_name')
-        # else:
-        #     data = json.loads(request.body) if request.body else {}
-        #     device_name = data.get('device_name')
-        #     username = data.get('username')
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
             username = data.get('username')
+            print(device_name)
+            print(username)
 
         if not device_name:
             return JsonResponse({
@@ -883,12 +866,13 @@ def airConditioner(request):
                         'message': '无效的状态值'
                     }, status=400)
                 
+                new_status = int(new_status)
                 ac.set_status(new_status)
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
                     devicetype="airConditioner",
-                    operation='turn on' if new_status == '1' else 'turn off'
+                    operation='turn on' if new_status == 1 else 'turn off'
                 )
 
             # 修改设备名称（需要权限）
@@ -955,13 +939,6 @@ def airConditioner(request):
 """
 def curtain(request):
     try:
-        # 获取设备名称
-        # if request.method == 'GET':
-        #     device_name = request.GET.get('device_name')
-        # else:
-        #     data = json.loads(request.body) if request.body else {}
-        #     device_name = data.get('device_name')
-        #     username = data.get('username')
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
@@ -988,12 +965,13 @@ def curtain(request):
                         'message': '无效的状态值（0表示关闭，1表示打开）'
                     }, status=400)
                 
+                new_status = int(new_status)
                 curtain.set_status(new_status)
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
                     devicetype="curtain",
-                    operation='打开' if new_status == '1' else '关闭'
+                    operation='turn on' if new_status == 1 else 'turn off'
                 )
 
             # 修改设备名称（需要权限）
@@ -1057,13 +1035,6 @@ def curtain(request):
 """
 def washingMachine(request):
     try:
-        # 获取设备名称
-        # if request.method == 'GET':
-        #     device_name = request.GET.get('device_name')
-        # else:
-        #     data = json.loads(request.body) if request.body else {}
-        #     device_name = data.get('device_name')
-        #     username = data.get('username')
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
@@ -1098,12 +1069,15 @@ def washingMachine(request):
                         'message': '无效的状态值（0表示关闭，1表示打开）'
                     }, status=400)
                 
+                new_status = int(new_status)
+                if new_status == 1:
+                    wm.set_starttime(timezone.now())
                 wm.set_status(new_status)
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
                     devicetype="washingMachine",
-                    operation='启动' if new_status == '1' else '停止'
+                    operation='turn on' if new_status == 1 else 'turn off'
                 )
 
             # 设置洗衣模式
@@ -1121,7 +1095,7 @@ def washingMachine(request):
                     username=username,
                     devicename=device_name,
                     devicetype="washingMachine",
-                    operation=f"设置为 {new_mode} 模式"
+                    operation=f"set mode to {new_mode}"
                 )
 
             # 修改设备名称
@@ -1139,7 +1113,7 @@ def washingMachine(request):
                     username=username,
                     devicename=old_name,
                     devicetype="washingMachine",
-                    operation=f"重命名为 {new_name}"
+                    operation=f"rename to {new_name}"
                 )
 
         # GET请求返回设备当前状态
@@ -1180,13 +1154,6 @@ def washingMachine(request):
 """
 def robotvacuum(request):
     try:
-        # 获取设备名称
-        # if request.method == 'GET':
-        #     device_name = request.GET.get('device_name')
-        # else:
-        #     data = json.loads(request.body) if request.body else {}
-        #     device_name = data.get('device_name')
-        #     username = data.get('username')
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
@@ -1221,12 +1188,13 @@ def robotvacuum(request):
                         'message': '无效的状态值（0表示关闭，1表示打开）'
                     }, status=400)
                 
+                new_status = int(new_status)
                 robot.set_status(new_status)
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
                     devicetype="robotvacuum",
-                    operation='启动清扫' if new_status == '1' else '停止清扫'
+                    operation='turn on' if new_status == 1 else 'turn off'
                 )
 
             # 设置清扫模式
@@ -1244,7 +1212,7 @@ def robotvacuum(request):
                     username=username,
                     devicename=device_name,
                     devicetype="robotvacuum",
-                    operation=f"设置为 {new_mode} 模式"
+                    operation=f"set mode to {new_mode}"
                 )
 
             # 修改设备名称
@@ -1262,7 +1230,7 @@ def robotvacuum(request):
                     username=username,
                     devicename=old_name,
                     devicetype="robotvacuum",
-                    operation=f"重命名为 {new_name}"
+                    operation=f"rename to {new_name}"
                 )
 
             # return JsonResponse(response_data)

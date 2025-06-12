@@ -16,7 +16,7 @@
     </div>
 
     <!-- 控制按钮 -->
-    <div class="mt-8 flex flex-wrap justify-center gap-4" v-if="device.controls">
+    <div class="mt-8 flex flex-wrap justify-center gap-4">
       <button
         @click="toggleWashingMachine"
         class="px-6 py-3 bg-blue-500 text-white rounded-full shadow-lg transform transition active:scale-95"
@@ -28,14 +28,12 @@
         v-model="selectedMode"
         @change="changeMode"
         class="px-4 py-2 border rounded-lg"
-        :disabled="!device.controls.can_change_mode"
       >
         <option v-for="mode in device.valid_modes" :key="mode" :value="mode">{{ mode }}</option>
       </select>
 
       <button
         @click="renameDevice"
-        v-if="device.controls.can_rename"
         class="px-6 py-3 bg-green-500 text-white rounded-full shadow-lg transform transition active:scale-95"
       >
         修改设备名称
@@ -51,28 +49,34 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { API_BASE_URL } from "../../main";
+import { API_BASE_URL } from "../../main"
 import axios from 'axios'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const deviceName = route.query.name
 
-const device = ref({})
+// 初始化默认设备对象，防止 controls undefined
+const device = ref({
+  name: '',
+  mode: '',
+  remaining_time: null,
+  valid_modes: []
+})
 const isRunning = ref(false)
 const selectedMode = ref('')
 const isLoaded = ref(false)
 
 const fetchWashingMachine = async () => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/washingmachine/`, {
+    const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
       username: localStorage.getItem('username'),
       device_name: deviceName
     })
 
     if (response.data.status === 'success') {
       device.value = response.data.device
-      isRunning.value = response.data.device.status === '1'
+      isRunning.value = response.data.device.status === 1
       selectedMode.value = response.data.device.mode
     } else {
       alert(response.data.message)
@@ -88,7 +92,7 @@ const fetchWashingMachine = async () => {
 const toggleWashingMachine = async () => {
   try {
     const newStatus = isRunning.value ? '0' : '1'
-    const response = await axios.post(`${API_BASE_URL}/home/devices/washingmachine/`, {
+    const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
       username: localStorage.getItem('username'),
       device_name: deviceName,
       new_status: newStatus
@@ -107,7 +111,7 @@ const toggleWashingMachine = async () => {
 
 const changeMode = async () => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/washingmachine/`, {
+    const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
       username: localStorage.getItem('username'),
       device_name: deviceName,
       new_mode: selectedMode.value
@@ -128,7 +132,7 @@ const renameDevice = async () => {
   const newName = prompt('请输入新的设备名称', device.value.name)
   if (newName && newName.trim() !== '') {
     try {
-      const response = await axios.post(`${API_BASE_URL}/home/devices/washingmachine/`, {
+      const response = await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
         username: localStorage.getItem('username'),
         device_name: deviceName,
         new_name: newName
@@ -165,4 +169,3 @@ onMounted(() => {
   animation: none;
 }
 </style>
-

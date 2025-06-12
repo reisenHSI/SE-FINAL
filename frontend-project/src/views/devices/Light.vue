@@ -96,7 +96,10 @@ const newDeviceName = ref('')
 // 获取设备信息
 const fetchDeviceInfo = async () => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, { device_name: deviceName })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, {
+      username: localStorage.getItem('username'),
+      device_name: deviceName
+    })
     if (response.data.status === 'success') {
       device.value = response.data.device
       sliderBrightness.value = device.value.brightness
@@ -113,6 +116,7 @@ const toggleLight = async () => {
   try {
     const newStatus = device.value.status === '1' ? '0' : '1'
     const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, {
+      username: localStorage.getItem('username'),
       device_name: deviceName,
       new_status: newStatus
     })
@@ -130,6 +134,7 @@ const toggleLight = async () => {
 const changeBrightness = async () => {
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, {
+      username: localStorage.getItem('username'),
       device_name: deviceName,
       new_brightness: sliderBrightness.value
     })
@@ -152,6 +157,7 @@ const renameDevice = async () => {
 
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, {
+      username: localStorage.getItem('username'),
       device_name: deviceName,
       new_name: newDeviceName.value
     })

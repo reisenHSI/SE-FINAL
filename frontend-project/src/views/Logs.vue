@@ -5,7 +5,7 @@
     <div class="filter-section">
       <label>
         用户名:
-        <select v-model="filters.username">
+        <select v-model="filters.check_username">
           <option value="">全部</option>
           <option v-for="user in filterOptions.usernames" :key="user" :value="user">{{ user }}</option>
         </select>
@@ -21,15 +21,16 @@
 
       <label>
         起始时间:
-        <input type="datetime-local" v-model="filters.start_time" />
+        <input type="date" v-model="filters.start_time" />
       </label>
 
       <label>
         结束时间:
-        <input type="datetime-local" v-model="filters.end_time" />
+        <input type="date" v-model="filters.end_time" />
       </label>
 
-      <button @click="fetchLogs">查询</button>
+      <button @click="fetchLogs(true)">查询</button>
+      <button @click="resetFilters">重置</button>
     </div>
 
     <div class="summary">
@@ -48,6 +49,9 @@
 </template>
 
 <script>
+import { API_BASE_URL } from "../main";
+import axios from "axios";
+
 export default {
   name: 'Logs',
   data() {
@@ -68,47 +72,43 @@ export default {
     }
   },
   mounted() {
-    this.fetchLogs()
+    this.fetchLogs(false)
   },
   methods: {
-    async fetchLogs() {
+    async fetchLogs(isFilter) {
       this.errorMsg = ''
       try {
-        const body = {
-          username: this.filters.username || null,
-          devicename: this.filters.devicename || null,
-          start_time: this.filters.start_time || null,
-          end_time: this.filters.end_time || null,
+        let response
+        if (isFilter) {
+          // POST 筛选
+          response = await axios.post(`${API_BASE_URL}home/query_logs/`, this.filters)
+
+        } else {
+          // GET 全查
+          response = await axios.get(`${API_BASE_URL}home/query_logs/`)
         }
 
-        // 请求参数是POST且有JSON body
-        const response = await fetch('/api/query_logs/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        })
-
-        const data = await response.json()
-
-        if (response.ok && data.status === 'success') {
-          this.logs = data.logs
-          this.totalCount = data.total_count
-          this.filterOptions.usernames = data.filter_options.usernames || []
-          this.filterOptions.devicenames = data.filter_options.devicenames || []
+        if (response.data.status === 'success') {
+          this.logs = response.data.logs
+          this.totalCount = response.data.total_count
+          this.filterOptions.usernames = response.data.filter_options.usernames || []
+          this.filterOptions.devicenames = response.data.filter_options.devicenames || []
         } else {
-          this.errorMsg = data.message || '查询失败'
-          if (data.redirect) {
-            // 可根据需要自动跳转登录等
-            setTimeout(() => {
-              this.$router.push(data.redirect)
-            }, 2000)
-          }
+          this.errorMsg = response.data.message || '查询失败'
         }
       } catch (e) {
         this.errorMsg = '网络或服务器错误: ' + e.message
       }
+    },
+    resetFilters() {
+      this.filters = {
+        username: localStorage.getItem('username'),
+        check_username: '',
+        devicename: '',
+        start_time: '',
+        end_time: ''
+      }
+      this.fetchLogs(false)
     }
   }
 }
@@ -118,6 +118,14 @@ export default {
 .logs-container {
   padding: 20px;
   background: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+h2 {
+  color: #2a6ecf;
+  margin-bottom: 20px;
 }
 
 .filter-section {
@@ -125,7 +133,7 @@ export default {
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 20px;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .filter-section label {
@@ -152,13 +160,14 @@ button {
   border-radius: 6px;
   padding: 8px 16px;
   cursor: pointer;
-  margin-top: 20px;
+  margin-top: 4px;
   height: 36px;
-  align-self: flex-end;
+  transition: all 0.3s ease;
 }
 
 button:hover {
   background-color: #1e50a1;
+  transform: translateY(-2px);
 }
 
 .summary {
@@ -175,6 +184,7 @@ button:hover {
   border: 1px solid #d0e3f1;
   border-radius: 8px;
   background: white;
+  width: 80%;
 }
 
 .log-item {

@@ -51,6 +51,7 @@ export default {
         // 处理请求返回的信息
         if (response.data.status === 'success') {
           localStorage.setItem('token', 'true');
+          localStorage.setItem('username', this.username)
           this.$router.push('/home');  // 跳转到home界面
         } else {
           this.errorMessage = response.data.message;

@@ -46,11 +46,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { API_BASE_URL } from "../../main";
 import axios from 'axios'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const deviceName = route.query.device_name
+const deviceName = route.query.name
 
 const device = ref({})
 const isRunning = ref(false)
@@ -58,7 +59,7 @@ const selectedMode = ref('')
 
 const fetchWashingMachine = async () => {
   try {
-    const response = await axios.get('/washingMachine/', { params: { device_name: deviceName } })
+    const response = await axios.get('/washingMachine/', { params: { username: localStorage.getItem('username'), device_name: deviceName } })
     if (response.data.status === 'success') {
       device.value = response.data.device
       isRunning.value = response.data.device.status === '1'
@@ -75,7 +76,7 @@ const fetchWashingMachine = async () => {
 const toggleWashingMachine = async () => {
   try {
     const newStatus = isRunning.value ? '0' : '1'
-    const response = await axios.post('/washingMachine/', { device_name: deviceName, new_status: newStatus })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_status: newStatus })
 
     if (response.data.status === 'success') {
       isRunning.value = !isRunning.value
@@ -90,7 +91,7 @@ const toggleWashingMachine = async () => {
 
 const changeMode = async () => {
   try {
-    const response = await axios.post('/washingMachine/', { device_name: deviceName, new_mode: selectedMode.value })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_mode: selectedMode.value })
 
     if (response.data.status === 'success') {
       device.value.mode = selectedMode.value
@@ -107,7 +108,7 @@ const renameDevice = async () => {
   const newName = prompt('请输入新的设备名称', device.value.name)
   if (newName && newName.trim() !== '') {
     try {
-      const response = await axios.post('/washingMachine/', { device_name: deviceName, new_name: newName })
+      const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_name: newName })
 
       if (response.data.status === 'success') {
         device.value.name = newName

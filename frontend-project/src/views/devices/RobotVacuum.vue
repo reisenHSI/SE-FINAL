@@ -34,13 +34,24 @@
         <option v-for="mode in device.valid_modes" :key="mode" :value="mode">{{ mode }}</option>
       </select>
 
-      <button
-        @click="renameDevice"
-        v-if="device.controls.can_rename"
-        class="px-6 py-3 bg-green-500 text-white rounded-full shadow-lg transform transition active:scale-95"
-      >
-        修改设备名称
-      </button>
+      <!-- 重命名输入框 -->
+      <div class="w-full flex flex-col items-center">
+        <label class="text-lg font-semibold mb-2">重命名设备</label>
+        <div class="flex w-full space-x-4">
+          <input
+            type="text"
+            v-model="newDeviceName"
+            placeholder="输入新设备名称"
+            class="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition shadow"
+            @click="renameDevice"
+          >
+            确认
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -49,9 +60,10 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
+import { API_BASE_URL } from "../../main";
 
 const route = useRoute()
-const deviceName = route.query.device_name
+const deviceName = route.query.name
 
 const device = ref({})
 const isRunning = ref(false)
@@ -59,7 +71,7 @@ const selectedMode = ref('')
 
 const fetchRobotVacuum = async () => {
   try {
-    const response = await axios.get('/robotvacuum/', { params: { device_name: deviceName } })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { params: { username: localStorage.getItem('username'), device_name: deviceName } })
     if (response.data.status === 'success') {
       device.value = response.data.device
       isRunning.value = response.data.device.status === '1'
@@ -76,7 +88,8 @@ const fetchRobotVacuum = async () => {
 const toggleRobot = async () => {
   try {
     const newStatus = isRunning.value ? '0' : '1'
-    const response = await axios.post('/robotvacuum/', { device_name: deviceName, new_status: newStatus })
+    console.log(`newStatus:${newStatus}`)
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_status: newStatus })
 
     if (response.data.status === 'success') {
       isRunning.value = !isRunning.value
@@ -91,7 +104,7 @@ const toggleRobot = async () => {
 
 const changeMode = async () => {
   try {
-    const response = await axios.post('/robotvacuum/', { device_name: deviceName, new_mode: selectedMode.value })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_mode: selectedMode.value })
 
     if (response.data.status === 'success') {
       device.value.mode = selectedMode.value
@@ -108,7 +121,7 @@ const renameDevice = async () => {
   const newName = prompt('请输入新的设备名称', device.value.name)
   if (newName && newName.trim() !== '') {
     try {
-      const response = await axios.post('/robotvacuum/', { device_name: deviceName, new_name: newName })
+      const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_name: newName })
 
       if (response.data.status === 'success') {
         device.value.name = newName

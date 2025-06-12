@@ -4,7 +4,9 @@
 
     <div class="main-section">
       <LeftSide @filter-change="filterDevice" />
-      <Devices :filter="currentFilter" />
+      <div class="devices-wrapper">
+        <Devices :filter="currentFilter" />
+      </div>
     </div>
 
     <Footer />
@@ -43,5 +45,21 @@ export default {
 .main-section {
   display: flex;
   flex: 1;
+}
+
+/* 左侧菜单固定宽度 */
+.main-section > :first-child {
+  width: 200px; /* 你可以根据实际需要调整宽度 */
+  border-right: 1px solid #e0e0e0;
+}
+
+/* Devices 区域包裹器，保证 Devices 居中 */
+.devices-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  align-items: flex-start; /* 顶部对齐 */
+  padding: 40px 20px;
+  overflow-y: auto; /* 防止内容溢出 */
 }
 </style>

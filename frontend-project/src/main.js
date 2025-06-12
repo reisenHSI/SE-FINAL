@@ -1,6 +1,8 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+import './assets/index.css'
+
 
 // 引入 Element Plus
 import ElementPlus from 'element-plus'

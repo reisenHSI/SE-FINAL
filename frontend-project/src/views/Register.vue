@@ -24,6 +24,10 @@
           <input v-model="confirmPassword" type="password" id="confirmPassword" required />
         </div>
 
+        <div v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+        </div>
+
         <button type="submit" class="register-button">注册</button>
       </form>
     </div>

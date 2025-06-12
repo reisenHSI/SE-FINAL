@@ -72,7 +72,6 @@ def register(request):
                 age = int(age),
                 permission=permission
             )
-            new_user.save()
 
             # 返回注册成功响应
             return JsonResponse({
@@ -120,8 +119,8 @@ def login(request):
 
             try:
                 user = User.objects.get(username=username)
-                
-                if check_password(password, user.password):                    
+                if check_password(password, user.password):
+
                     return JsonResponse({
                         'status': 'success',
                         'message': '登录成功',
@@ -131,6 +130,7 @@ def login(request):
                         }
                     })
                 else:
+                    print(f'{username}, {password}')
                     return JsonResponse({
                         'status': 'error',
                         'message': '密码错误'

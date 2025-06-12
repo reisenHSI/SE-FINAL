@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col items-center justify-center h-screen bg-gray-100">
+  <div class="flex flex-col items-center justify-center h-screen bg-gray-100" v-if="isLoaded">
     <!-- 设备信息 -->
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
@@ -11,7 +11,7 @@
     <!-- 扫地机器人动画 -->
     <div class="relative w-40 h-40 border-8 border-gray-500 rounded-full flex items-center justify-center bg-white shadow-lg overflow-hidden">
       <div
-        class="w-32 h-32 rounded-full border-4 border-green-400 animate-spin"
+        class="w-32 h-32 rounded-full border-4 border-green-400"
         :class="{ 'animate-spin': isRunning, 'animate-none': !isRunning }"
       ></div>
     </div>
@@ -29,7 +29,7 @@
         v-model="selectedMode"
         @change="changeMode"
         class="px-4 py-2 border rounded-lg"
-        :disabled="!device.controls.can_change_mode"
+        :disabled="!(device.controls && device.controls.can_change_mode)"
       >
         <option v-for="mode in device.valid_modes" :key="mode" :value="mode">{{ mode }}</option>
       </select>
@@ -54,6 +54,11 @@
       </div>
     </div>
   </div>
+
+  <!-- 加载中状态 -->
+  <div v-else class="flex items-center justify-center h-screen bg-gray-100">
+    <p class="text-lg text-gray-500">加载中...</p>
+  </div>
 </template>
 
 <script setup>
@@ -68,10 +73,15 @@ const deviceName = route.query.name
 const device = ref({})
 const isRunning = ref(false)
 const selectedMode = ref('')
+const newDeviceName = ref('')
+const isLoaded = ref(false)
 
 const fetchRobotVacuum = async () => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { params: { username: localStorage.getItem('username'), device_name: deviceName } })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, {
+      username: localStorage.getItem('username'),
+      device_name: deviceName
+    })
     if (response.data.status === 'success') {
       device.value = response.data.device
       isRunning.value = response.data.device.status === '1'
@@ -82,14 +92,19 @@ const fetchRobotVacuum = async () => {
   } catch (error) {
     console.error(error)
     alert('获取设备信息失败')
+  } finally {
+    isLoaded.value = true
   }
 }
 
 const toggleRobot = async () => {
   try {
     const newStatus = isRunning.value ? '0' : '1'
-    console.log(`newStatus:${newStatus}`)
-    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_status: newStatus })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, {
+      username: localStorage.getItem('username'),
+      device_name: deviceName,
+      new_status: newStatus
+    })
 
     if (response.data.status === 'success') {
       isRunning.value = !isRunning.value
@@ -104,7 +119,11 @@ const toggleRobot = async () => {
 
 const changeMode = async () => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_mode: selectedMode.value })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, {
+      username: localStorage.getItem('username'),
+      device_name: deviceName,
+      new_mode: selectedMode.value
+    })
 
     if (response.data.status === 'success') {
       device.value.mode = selectedMode.value
@@ -118,13 +137,17 @@ const changeMode = async () => {
 }
 
 const renameDevice = async () => {
-  const newName = prompt('请输入新的设备名称', device.value.name)
-  if (newName && newName.trim() !== '') {
+  if (newDeviceName.value && newDeviceName.value.trim() !== '') {
     try {
-      const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, { username: localStorage.getItem('username'), device_name: deviceName, new_name: newName })
+      const response = await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, {
+        username: localStorage.getItem('username'),
+        device_name: deviceName,
+        new_name: newDeviceName.value
+      })
 
       if (response.data.status === 'success') {
-        device.value.name = newName
+        device.value.name = newDeviceName.value
+        newDeviceName.value = ''
       } else {
         alert(response.data.message)
       }
@@ -132,6 +155,8 @@ const renameDevice = async () => {
       console.error(error)
       alert('重命名失败')
     }
+  } else {
+    alert('设备名称不能为空')
   }
 }
 

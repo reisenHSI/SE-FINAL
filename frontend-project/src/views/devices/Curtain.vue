@@ -64,7 +64,10 @@ const isOpen = ref(false)
 const fetchCurtain = async () => {
   try {
     console.log(deviceName)
-    const response = await axios.post(`${API_BASE_URL}/home/devices/curtain/`, { username: localStorage.getItem('username'), device_name: deviceName })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/curtain/`, {
+      username: localStorage.getItem('username'),
+      device_name: deviceName
+    })
     if (response.data.status === 'success') {
       device.value = response.data.device
       isOpen.value = response.data.device.status === '1'
@@ -81,7 +84,11 @@ const toggleCurtain = async () => {
   try {
     const newStatus = isOpen.value ? '0' : '1'
     console.log(`newStatus:${newStatus}`)
-    const response = await axios.post(`${API_BASE_URL}/home/devices/curtain/`, { username: localStorage.getItem('username'), device_name: deviceName, new_status: newStatus })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/curtain/`, {
+      username: localStorage.getItem('username'),
+      device_name: deviceName,
+      new_status: newStatus
+    })
 
     if (response.data.status === 'success') {
       isOpen.value = !isOpen.value

@@ -7,6 +7,7 @@
       <span class="username">欢迎，{{ username }}</span>
       <button @click="goHome">主页</button>
       <button @click="goToLogs">日志查询</button>
+      <button @click="goToHabits">个人习惯</button>
       <button @click="triggerOneKeyOpen">一键开启</button>
       <button class="logout-btn" @click="logout">退出登录</button>
     </div>
@@ -32,6 +33,9 @@ export default {
     },
     goToLogs() {
       this.$router.push('/logs')
+    },
+    goToHabits() {
+      this.$router.push('/habits')
     },
     triggerOneKeyOpen() {
       // 你可以用 emit 或 Vuex 通知主组件执行操作

@@ -223,6 +223,7 @@ class Curtain(Device):
 
 # 洗衣机
 class WashingMachine(Device):
+    starttime = models.DateTimeField(auto_now_add=True) # 时间戳
     mode = models.CharField(max_length=20, default='wash') #wash为洗涤，dry为烘干,fastwash为快速洗涤
 
     def __str__(self):
@@ -231,6 +232,15 @@ class WashingMachine(Device):
     # 获取模式
     def get_mode(self):
         return self.mode
+    
+    # 获取开始时间
+    def get_starttime(self):
+        return self.starttime
+    
+    # 设置开始时间
+    def set_starttime(self, starttime):
+        self.starttime = starttime
+        self.save()
 
     # 设置模式：wash，dry,fastwash
     def set_mode(self, mode):

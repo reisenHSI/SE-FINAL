@@ -11,7 +11,11 @@
   </div>
 </template>
 
+
+
 <script>
+import axios from 'axios'
+import { API_BASE_URL } from "../main";
 export default {
   name: "DeleteDevices",
   data() {
@@ -21,12 +25,25 @@ export default {
     };
   },
   methods: {
-    confirmDelete() {
-      // 这里写调用后端删除设备的代码
-      alert(`已删除设备: ${this.deviceName} (ID: ${this.deviceId})`);
+    async confirmDelete() {
+      try {
+        console.log('1')
+        const response = await axios.post(`${API_BASE_URL}home/add_delete/delete_device/`, {
+          device_name: this.deviceName,
+          username: localStorage.getItem('username')
+        }, { withCredentials: true })
 
-      // 删除成功后跳转回设备列表
-      this.$router.push({ name: "Devices" });
+        console.log(response)
+        if (response.data.status === 'success') {
+          this.$message.success(`已成功删除设备: ${this.deviceName} (ID: ${this.deviceId})`)
+          this.$router.push({ name: "Home" })
+        } else {
+          this.$message.error(response.data.message || '设备删除失败')
+        }
+      } catch (error) {
+        console.error('删除设备失败:', error)
+        this.$message.error(error.response?.data?.message || '删除设备时发生错误')
+      }
     },
     cancel() {
       this.$router.back();

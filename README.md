@@ -31,18 +31,6 @@ views.py中每一个函数对应页面跳转的一个方框
 
 to do:
 
-！！！页面渲染未成功待解决（6.9）
-
-请参考views.py和urls.py中添加/删除/修改前端的文件
-
-Devices陈列所有设备信息
-
-DevicesDetail实现跳转到具体设备的逻辑
-
-Light等具体设备的逻辑
-
-添加/删除设备的逻辑  
-
 # 配置  
 后端: Django  
 前端: Vue  

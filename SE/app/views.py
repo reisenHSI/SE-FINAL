@@ -696,19 +696,11 @@ def devices(request):
 """
 def light(request):
     try:
-        # 获取设备名称
-        # if request.method == 'GET':
-        #     device_name = request.GET.get('device_name')
-        # else:
-        #     data = json.loads(request.body) if request.body else {}
-        #     device_name = data.get('device_name')
-        #     username = data.get('username')
         device_name = ""
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
-            # username = data.get('username')
-            username = "1"
+            username = data.get('username')
         
         if not device_name:
             return JsonResponse({

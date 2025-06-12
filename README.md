@@ -71,6 +71,15 @@ npm install
 npm run dev
 ```
 
+添加`tailwind css`组件
+```bash
+npm install -D tailwindcss postcss autoprefixer
+```
+如果还不能正常运行，则继续运行下面命令
+```bash
+npx tailwindcss@3.4.17 init -p
+```
+
 
 1. 添加设备时外键出错
 2. 注册时的用户权限初始化问题（邀请码）

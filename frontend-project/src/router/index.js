@@ -12,6 +12,7 @@ import RobotVacuum from '@/views/devices/RobotVacuum.vue'
 import Logs from '@/views/Logs.vue'
 import AddDevice from "@/views/AddDevice.vue";
 import DeleteDevice from "@/views/DeleteDevice.vue";
+import Habits from "@/views/Habits.vue"
 
 const routes = [
   {
@@ -34,7 +35,7 @@ const routes = [
   { path: '/devices/air', name: 'AirConditioner', component: AirConditioner },
   { path: '/devices/washing-machine', name: 'WashingMachine', component: WashingMachine },
   { path: '/devices/robotvacuum', name: 'RobotVacuum', component: RobotVacuum },
-  { path: '/Habits', name: 'Habits',},
+  { path: '/habits', name: 'Habits', component: Habits },
 
 
     // 防止路径不匹配导致页面空白

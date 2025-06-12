@@ -16,7 +16,6 @@
         ]"
         style="width: 50%; height: 100%;"
       >
-        <!-- 灯泡图标 -->
         <div
           :class="[
             'text-[10rem] transition-transform duration-500',
@@ -28,9 +27,9 @@
       </div>
     </div>
 
-    <!-- 控制按钮 -->
-    <div class="flex flex-col items-center space-y-6">
-      <!-- 拨动开关按钮 -->
+    <!-- 控制区域 -->
+    <div class="flex flex-col items-center space-y-8 w-full max-w-md">
+      <!-- 拨动开关 -->
       <div class="flex items-center space-x-4">
         <span class="text-xl font-semibold">{{ device.status === '1' ? '开' : '关' }}</span>
         <div
@@ -45,32 +44,50 @@
         </div>
       </div>
 
-      <!-- 调整亮度按钮 -->
-      <button
-        class="px-6 py-3 bg-blue-500 text-white rounded-full text-lg hover:bg-blue-600 transition"
-        @click="changeBrightness"
-      >
-        调整亮度
-      </button>
+      <!-- 亮度滑块 -->
+      <div class="w-full flex flex-col items-center">
+        <label class="text-lg font-semibold mb-2">调整亮度</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          v-model="sliderBrightness"
+          @change="changeBrightness"
+          class="w-full accent-blue-500 cursor-pointer"
+        />
+        <span class="mt-2 text-gray-700">{{ sliderBrightness }}%</span>
+      </div>
 
-      <!-- 重命名按钮 -->
-      <button
-        class="px-6 py-3 bg-yellow-500 text-white rounded-full text-lg hover:bg-yellow-600 transition"
-        @click="renameDevice"
-      >
-        重命名设备
-      </button>
+      <!-- 重命名输入框 -->
+      <div class="w-full flex flex-col items-center">
+        <label class="text-lg font-semibold mb-2">重命名设备</label>
+        <div class="flex w-full space-x-4">
+          <input
+            type="text"
+            v-model="newDeviceName"
+            placeholder="输入新设备名称"
+            class="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition shadow"
+            @click="renameDevice"
+          >
+            确认
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { API_BASE_URL } from "../../main";
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const deviceName = route.query.device_name || '默认设备名'
+const deviceName = route.query.name || '默认设备名'
 
 const device = ref({
   id: null,
@@ -80,12 +97,16 @@ const device = ref({
   brightness: 0,
 })
 
+const sliderBrightness = ref(0)
+const newDeviceName = ref('')
+
 // 获取设备信息
 const fetchDeviceInfo = async () => {
   try {
-    const response = await axios.get('/light/', { params: { device_name: deviceName } })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, { device_name: deviceName })
     if (response.data.status === 'success') {
       device.value = response.data.device
+      sliderBrightness.value = device.value.brightness
     } else {
       alert(response.data.message)
     }
@@ -98,7 +119,10 @@ const fetchDeviceInfo = async () => {
 const toggleLight = async () => {
   try {
     const newStatus = device.value.status === '1' ? '0' : '1'
-    const response = await axios.post('/light/', { device_name: device.value.name, new_status: newStatus })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, {
+      device_name: deviceName,
+      new_status: newStatus
+    })
     if (response.data.status === 'success') {
       device.value.status = newStatus
     } else {
@@ -111,19 +135,13 @@ const toggleLight = async () => {
 
 // 调整亮度
 const changeBrightness = async () => {
-  const newBrightness = prompt('请输入新的亮度（0-100）', device.value.brightness)
-  if (newBrightness === null) return
-  const brightnessValue = parseInt(newBrightness)
-
-  if (isNaN(brightnessValue) || brightnessValue < 0 || brightnessValue > 100) {
-    alert('亮度必须是 0 到 100 的整数')
-    return
-  }
-
   try {
-    const response = await axios.post('/light/', { device_name: device.value.name, new_brightness: brightnessValue })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, {
+      device_name: deviceName,
+      new_brightness: sliderBrightness.value
+    })
     if (response.data.status === 'success') {
-      device.value.brightness = brightnessValue
+      device.value.brightness = sliderBrightness.value
     } else {
       alert(response.data.message)
     }
@@ -134,14 +152,20 @@ const changeBrightness = async () => {
 
 // 重命名设备
 const renameDevice = async () => {
-  const newName = prompt('请输入新的设备名称', device.value.name)
-  if (!newName) return
+  if (!newDeviceName.value.trim()) {
+    alert('设备名称不能为空')
+    return
+  }
 
   try {
-    const response = await axios.post('/light/', { device_name: device.value.name, new_name: newName })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/light/`, {
+      device_name: deviceName,
+      new_name: newDeviceName.value
+    })
     if (response.data.status === 'success') {
-      device.value.name = newName
+      device.value.name = newDeviceName.value
       alert('重命名成功')
+      newDeviceName.value = ''
     } else {
       alert(response.data.message)
     }
@@ -156,5 +180,51 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 可以添加额外细节样式，这里主要用的是 Tailwind 动画 */
+/* 美化滑块兼容所有浏览器 */
+input[type="range"] {
+  -webkit-appearance: none; /* Chrome */
+  appearance: none;
+  height: 6px;
+  background: #d1d5db; /* gray-300 */
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #3b82f6; /* blue-500 */
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+  transition: background 0.3s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #2563eb; /* blue-600 */
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #3b82f6; /* blue-500 */
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+  transition: background 0.3s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: #2563eb; /* blue-600 */
+}
+
+/* 输入框聚焦高亮 */
+input[type="text"]:focus {
+  border-color: #3b82f6; /* blue-500 */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4); /* blue-500 shadow */
+  outline: none;
+}
+
 </style>

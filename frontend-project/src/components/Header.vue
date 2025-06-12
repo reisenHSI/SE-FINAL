@@ -18,7 +18,7 @@ export default {
   name: 'Header',
   data() {
     return {
-      username: 'admin' // 通过 props 或 Vuex 替换为实际登录用户
+      username: localStorage.getItem('username')
     }
   },
   methods: {

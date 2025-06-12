@@ -65,14 +65,24 @@
         </button>
       </div>
 
-      <!-- 重命名 -->
-      <button
-        v-if="device.controls.can_rename"
-        @click="renameDevice"
-        class="mt-4 w-32 h-10 bg-yellow-500 rounded-full text-lg shadow-md active:scale-95 transition transform"
-      >
-        重命名
-      </button>
+      <!-- 重命名输入框 -->
+      <div class="w-full flex flex-col items-center">
+        <label class="text-lg font-semibold mb-2">重命名设备</label>
+        <div class="flex w-full space-x-4">
+          <input
+            type="text"
+            v-model="newDeviceName"
+            placeholder="输入新设备名称"
+            class="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition shadow"
+            @click="renameDevice"
+          >
+            确认
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -81,9 +91,10 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
+import { API_BASE_URL } from "../../main";
 
 const route = useRoute()
-const deviceName = route.query.device_name || '默认空调设备'
+const deviceName = route.query.name || '默认空调设备'
 
 const device = ref({
   id: null,
@@ -104,7 +115,7 @@ const modeLabels = {
 
 const fetchDeviceInfo = async () => {
   try {
-    const response = await axios.get('/airConditioner/', { params: { device_name: deviceName } })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { params: { device_name: deviceName } })
     if (response.data.status === 'success') {
       device.value = response.data.device
     } else {
@@ -118,7 +129,7 @@ const fetchDeviceInfo = async () => {
 const togglePower = async () => {
   try {
     const newStatus = device.value.status === '1' ? '0' : '1'
-    const response = await axios.post('/airConditioner/', { device_name: device.value.name, new_status: newStatus })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_status: newStatus })
     if (response.data.status === 'success') {
       device.value.status = newStatus
     } else {
@@ -132,7 +143,7 @@ const togglePower = async () => {
 const changeTemperature = async (newTemp) => {
   if (newTemp < 16 || newTemp > 30) return alert('温度必须在 16-30℃')
   try {
-    const response = await axios.post('/airConditioner/', { device_name: device.value.name, new_temperature: newTemp })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_temperature: newTemp })
     if (response.data.status === 'success') {
       device.value.temperature = newTemp
     } else {
@@ -145,7 +156,7 @@ const changeTemperature = async (newTemp) => {
 
 const changeMode = async (mode) => {
   try {
-    const response = await axios.post('/airConditioner/', { device_name: device.value.name, new_mode: mode })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_mode: mode })
     if (response.data.status === 'success') {
       device.value.mode = mode
     } else {
@@ -160,7 +171,7 @@ const renameDevice = async () => {
   const newName = prompt('请输入新的设备名称', device.value.name)
   if (!newName) return
   try {
-    const response = await axios.post('/airConditioner/', { device_name: device.value.name, new_name: newName })
+    const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, { device_name: device.value.name, new_name: newName })
     if (response.data.status === 'success') {
       device.value.name = newName
       alert('重命名成功')

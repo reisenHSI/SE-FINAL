@@ -54,15 +54,17 @@ export default {
       }
 
       try {
+        console.log(localStorage.getItem('username'))
         // 向后端提交设备信息
         const response = await this.$axios.post(`${API_BASE_URL}home/add_delete/add_device/`, {
           device_name: this.deviceName,
-          device_type: this.deviceType
+          device_type: this.deviceType,
+          username: localStorage.getItem('username')
         });
 
         if (response.data.status === 'success') {
           alert('设备添加成功！');
-          this.$router.push({ name: 'Devices', query: { filter: this.deviceType } });
+          this.$router.push({ name: 'Home'});
         } else {
           alert(`添加失败：${response.data.message}`);
         }

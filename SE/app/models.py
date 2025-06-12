@@ -16,11 +16,14 @@ class User(models.Model):
     def __str__(self):
         return self.username
     
+    def get_permission(self):
+        return self.permission
+    
     # 修改密码
     def set_password(self, new_password):
         if not new_password: # 如果密码为空，则返回错误信息
             raise ValueError('密码不能为空！')
-        self.password = new_password
+        self.password = make_password(new_password)
 
     def check_password(self, new_password):
         return check_password(new_password, self.password)

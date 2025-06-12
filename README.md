@@ -70,3 +70,8 @@ cd frontend-project
 npm install
 npm run dev
 ```
+
+
+1. 添加设备时外键出错
+2. 注册时的用户权限初始化问题（邀请码）
+3. light修改亮度等时，数据库可以修改成功，但是日志查询不到，并且给前端返回error

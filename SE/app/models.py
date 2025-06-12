@@ -7,7 +7,7 @@ from django.contrib.auth.hashers import make_password, check_password
 """
 class User(models.Model):
     username = models.CharField(max_length=20) # 用户名
-    password = models.CharField(max_length=100) # 密码
+    password = models.CharField(max_length=200) # 密码
     phone = models.CharField(max_length=20) # 电话号码
     age = models.IntegerField() # 年龄
     User_id = models.IntegerField(primary_key=True) # 用户id——主键
@@ -32,10 +32,10 @@ class User(models.Model):
 class Log(models.Model):
     Log_id = models.IntegerField(primary_key=True) # 日志id——主键
     username = models.CharField(max_length=20) # 用户名
-    devicename = models.CharField(max_length=20) # 设备名
+    devicename = models.CharField(max_length=50) # 设备名
     devicetype = models.CharField(max_length=20) # 设备类型
     timestamp = models.DateTimeField(auto_now_add=True) # 时间戳
-    operation = models.CharField(max_length=20) # 操作类型
+    operation = models.CharField(max_length=200) # 操作类型
     
     # 日志号： 用户名 - 操作 - 设备名 at 时间
     def __str__(self):

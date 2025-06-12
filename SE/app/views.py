@@ -703,10 +703,12 @@ def light(request):
         #     data = json.loads(request.body) if request.body else {}
         #     device_name = data.get('device_name')
         #     username = data.get('username')
+        device_name = ""
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
-            username = data.get('username')
+            # username = data.get('username')
+            username = "1"
         
         if not device_name:
             return JsonResponse({
@@ -728,14 +730,28 @@ def light(request):
                         'message': '无效的状态值'
                     }, status=400)
                 
+                new_status = int(new_status)
+                print(f"device_name: {device_name}")
+                print(f"username: {username}")
+                print(type(new_status))
+                print(new_status)
                 light.set_status(new_status)
+                print(111)
                 Log.objects.create(
                     username=username,
                     devicename=device_name,
-                    devicetype="light",
-                    operation='turn on' if new_status == '1' else 'turn off'
+                    devicetype="Light",
+                    operation='turn on' if new_status == 1 else 'turn off',
+                    timestamp=timezone.now()
                 )
-
+                print(222)
+                # Log.objects.create(
+                #     username=username,
+                #     devicename=device_name,
+                #     devicetype=device_type,
+                #     operation='delete',
+                #     timestamp=timezone.now()
+                # )
             # 处理亮度变更
             if 'new_brightness' in data:
                 new_brightness = int(data['new_brightness'])
@@ -1009,7 +1025,7 @@ def curtain(request):
                     username=username,
                     devicename=old_name,
                     devicetype="curtain",
-                    operation=f"重命名为 {new_name}"
+                    operation=f"rename to {new_name}"
                 )
 
 

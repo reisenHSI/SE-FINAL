@@ -442,9 +442,10 @@ def delete_device(request):
         try:
             # 解析JSON数据
             data = json.loads(request.body)
-            device_names = data.get('device_names', [])  # 改为使用设备ID列表
+            device_name = data.get('device_name')  # 改为使用设备ID列表
             username = data.get('username')
             permission = User.objects.get(username=username).get_permission()
+            print(f'username: {username}, device_name: {device_name}, permission: {permission}')
 
             if permission != 2:
                 return JsonResponse({
@@ -453,38 +454,40 @@ def delete_device(request):
                     'redirect': '/home/add_delete/'
                 }, status=403)
             
-            if not device_names:
+            if not device_name:
                 return JsonResponse({
                     'status': 'error',
                     'message': '请选择要删除的设备'
                 }, status=400)
             
             deleted_devices = []
-            for device_name in device_names:
-                try:
-                    device = Device.objects.get(Device_name=device_name)
-                    device_name = device.Device_name
-                    device_type = device.Device_type
-                    
-                    # 删除设备
-                    device.delete()
-                    
-                    # 记录日志
-                    Log.objects.create(
-                        username=username,
-                        devicename=device_name,
-                        devicetype=device_type,
-                        operation='delete',
-                        timestamp=timezone.now()
-                    )
-                    
-                    deleted_devices.append({
-                        'name': device_name,
-                        'type': device_type
-                    })
-                    
-                except Device.DoesNotExist:
-                    continue
+
+            try:
+                print('1')
+                device = Device.objects.get(Device_name=device_name)
+                device_name = device.Device_name
+                device_type = device.Device_type
+
+                # 删除设备
+                device.delete()
+
+                # 记录日志
+                Log.objects.create(
+                    username=username,
+                    devicename=device_name,
+                    devicetype=device_type,
+                    operation='delete',
+                    timestamp=timezone.now()
+                )
+
+                deleted_devices.append({
+                    'name': device_name,
+                    'type': device_type
+                })
+
+            except Device.DoesNotExist:
+                pass
+
             
             # 返回成功响应
             return JsonResponse({

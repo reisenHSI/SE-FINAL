@@ -808,9 +808,13 @@ def light(request):
 def airConditioner(request):
     try:
         # 获取设备名称
-        if request.method == 'GET':
-            device_name = request.GET.get('device_name')
-        else:
+        # if request.method == 'GET':
+        #     device_name = request.GET.get('device_name')
+        # else:
+        #     data = json.loads(request.body) if request.body else {}
+        #     device_name = data.get('device_name')
+        #     username = data.get('username')
+        if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
             username = data.get('username')
@@ -944,9 +948,13 @@ def airConditioner(request):
 def curtain(request):
     try:
         # 获取设备名称
-        if request.method == 'GET':
-            device_name = request.GET.get('device_name')
-        else:
+        # if request.method == 'GET':
+        #     device_name = request.GET.get('device_name')
+        # else:
+        #     data = json.loads(request.body) if request.body else {}
+        #     device_name = data.get('device_name')
+        #     username = data.get('username')
+        if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
             username = data.get('username')
@@ -1042,9 +1050,13 @@ def curtain(request):
 def washingMachine(request):
     try:
         # 获取设备名称
-        if request.method == 'GET':
-            device_name = request.GET.get('device_name')
-        else:
+        # if request.method == 'GET':
+        #     device_name = request.GET.get('device_name')
+        # else:
+        #     data = json.loads(request.body) if request.body else {}
+        #     device_name = data.get('device_name')
+        #     username = data.get('username')
+        if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
             username = data.get('username')
@@ -1161,9 +1173,13 @@ def washingMachine(request):
 def robotvacuum(request):
     try:
         # 获取设备名称
-        if request.method == 'GET':
-            device_name = request.GET.get('device_name')
-        else:
+        # if request.method == 'GET':
+        #     device_name = request.GET.get('device_name')
+        # else:
+        #     data = json.loads(request.body) if request.body else {}
+        #     device_name = data.get('device_name')
+        #     username = data.get('username')
+        if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
             username = data.get('username')

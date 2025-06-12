@@ -29,13 +29,12 @@
         v-model="selectedMode"
         @change="changeMode"
         class="px-4 py-2 border rounded-lg"
-        :disabled="!(device.controls && device.controls.can_change_mode)"
       >
         <option v-for="mode in device.valid_modes" :key="mode" :value="mode">{{ mode }}</option>
       </select>
 
       <!-- 重命名输入框 -->
-      <div class="w-full flex flex-col items-center">
+      <div class="w-full flex flex-col items-center mt-4">
         <label class="text-lg font-semibold mb-2">重命名设备</label>
         <div class="flex w-full space-x-4">
           <input
@@ -84,7 +83,7 @@ const fetchRobotVacuum = async () => {
     })
     if (response.data.status === 'success') {
       device.value = response.data.device
-      isRunning.value = response.data.device.status === '1'
+      isRunning.value = response.data.device.status === 1
       selectedMode.value = response.data.device.mode
     } else {
       alert(response.data.message)

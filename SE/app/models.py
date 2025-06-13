@@ -326,12 +326,12 @@ class Habits(models.Model):
     devicename = models.CharField(max_length=20)
     devicetype = models.CharField(max_length=20)
     status = models.IntegerField(default=1)
-    brightness = models.IntegerField(default=None)
-    temperature = models.IntegerField(default=None)
-    mode = models.CharField(max_length=20, default=None) # 洗衣机、空调、扫地机
+    brightness = models.IntegerField(default=None, null=True)
+    temperature = models.IntegerField(default=None, null=True)
+    mode = models.CharField(max_length=20, default=None, null=True) # 洗衣机、空调、扫地机
 
     def __str__(self):
-        return self.habit_name
+        return self.habitname
     
     
 

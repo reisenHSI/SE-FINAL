@@ -201,7 +201,7 @@ const deleteHabits = async () => {
       console.log(habit)
       await axios.post(`${API_BASE_URL}/home/habits/delete_habit/`, {
         username: localStorage.getItem('username'),
-        habitname: habit.habitname
+        habits: habit.habitname
       })
     }
 

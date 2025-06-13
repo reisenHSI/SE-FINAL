@@ -4,4 +4,5 @@
 
 /frontend-project/node_modules/
 **/__pycache__/
-SE/app/migrations/
+
+*.sqlite3

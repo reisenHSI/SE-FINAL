@@ -66,7 +66,7 @@ export default {
       this.isSubmitting = true;
 
       try {
-        const response = await axios.post(`${API_BASE_URL}change_password`, {
+        const response = await axios.post(`${API_BASE_URL}/change_password/`, {
           username: this.username,
           old_password: this.oldPassword,
           new_password: this.newPassword,

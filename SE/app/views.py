@@ -3,6 +3,7 @@ from django.db.models import Max
 from django.utils import timezone
 from .models import *
 import json
+import random
 
 """
 前端需要实现的界面：
@@ -1192,6 +1193,9 @@ def robotvacuum(request):
                     }, status=400)
                 
                 new_status = int(new_status)
+                if new_status == 1:
+                    robot.set_electricity(random.randint(0, 100))
+                    robot.set_sweeparea(random.randint(0, 100))
                 robot.set_status(new_status)
                 Log.objects.create(
                     username=username,
@@ -1247,6 +1251,8 @@ def robotvacuum(request):
                 'type': robot.Device_type,
                 'status': robot.get_status(),
                 'mode': robot.get_mode(),
+                'electricity': robot.get_electricity(),
+                'sweeparea': robot.get_sweeparea(),
                 'valid_modes': ['auto', 'spot', 'edge', 'single_room', 'mop'],
             }
         })
@@ -1269,52 +1275,37 @@ def robotvacuum(request):
 
 
 """
-    habits.html处理逻辑
-    第一次进入页面时为GET请求，返回当前用户的所有习惯（关键：devices_data）
-    POST请求时，用户选择习惯名称，传入到后端并开启所有设备，最后返回设备信息列表(activated_devices)
+    habits逻辑
+    前端传入username，后端返回所有该用户的habitname、devicename和devicetype
 """
 def habits(request):
     try:        
         # 处理POST请求（执行习惯）
-        username = ""
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
-            habit_name = data.get('habit_name')
             username = data.get('username')
             
-            if not habit_name:
+            if not username:
                 return JsonResponse({
                     'status': 'error',
-                    'message': '请选择要执行的习惯'
+                    'message': '请先登录'
                 }, status=400)
             
             try:
-                habit = Habits.objects.get(username=username, habit_name=habit_name)
-                activated_devices = []
-                
-                for device in habit.favorite_devices.all():
-                    # 开启设备
-                    device.turn_on()
-                    device_info = {
-                        'name': device.Device_name,
-                        'type': device.Device_type,
-                        'status': device.get_status()
-                    }
-                    activated_devices.append(device_info)
-                    
-                    # 记录日志
-                    Log.objects.create(
-                        username=username,
-                        devicename=device.Device_name,
-                        devicetype=device.Device_type,
-                        operation=f"通过习惯'{habit_name}'启动"
-                    )
+                myhabits = Habits.objects.get(username=username)
+                result = []
+                for myhabit in myhabits:
+                    result.append({
+                        'habitname': myhabit.habitname,
+                        'devicename': myhabit.devicename,
+                        'devicetype': myhabit.devicetype,
+                    })
                 
                 return JsonResponse({
-                    'status': 'success',
-                    'message': f"习惯'{habit_name}'已执行",
-                    'activated_devices': activated_devices
+                    'username': username,
+                    'result': result
                 })
+
                 
             except Habits.DoesNotExist:
                 return JsonResponse({
@@ -1322,32 +1313,6 @@ def habits(request):
                     'message': '找不到指定的习惯'
                 }, status=404)
 
-        # GET请求返回用户所有习惯
-        user_habits = Habits.objects.filter(username=username)
-        habits_data = []
-        
-        for habit in user_habits:
-            devices_data = []
-            for device in habit.favorite_devices.all():
-                devices_data.append({
-                    'id': device.Device_id,
-                    'name': device.Device_name,
-                    'type': device.Device_type,
-                    'status': device.get_status() if hasattr(device, 'get_status') else None
-                })
-            
-            habits_data.append({
-                'id': habit.habit_id,
-                'name': habit.habit_name,
-                'created_at': habit.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'devices': devices_data
-            })
-        
-        return JsonResponse({
-            'status': 'success',
-            'habits': habits_data,
-            'username': username,
-        })
 
     except json.JSONDecodeError:
         return JsonResponse({
@@ -1371,93 +1336,72 @@ def add_habit(request):
     try:        
         # 处理POST请求（创建新习惯）
         if request.method == 'POST':
+            brightness, temperature, mode = None, None, None
             data = json.loads(request.body) if request.body else {}
-            selected_device_names = data.get('device_names', [])
-            habit_name = data.get('habit_name', '').strip()
             username = data.get('username')
             permission = User.objects.get(username=username).get_permission()
+            habitname = data.get('habitname')
+            devicename = data.get('devicename')
+            devicetype = data.get('devicetype')
+            if 'brightness' in data:
+                brightness = data.get('brightness')
+            if 'temperature' in data:
+                temperature = data.get('temperature')
+            if 'mode' in data:
+                mode = data.get('mode')
 
+            if not username:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请先登录'
+                }, status=400)
+            
             if permission < 1:
                 return JsonResponse({
                     'status': 'error',
-                    'message': '您没有权限创建习惯',
-                    'redirect': '/home/habits/'
-                }, status=403)
-
-            # 验证输入
-            if not habit_name:
+                    'message': '您无权限执行此操作'
+                }, status=400)
+            
+            if not all([habitname, devicename, devicetype]):
                 return JsonResponse({
                     'status': 'error',
-                    'message': '习惯名称不能为空'
+                    'message': '请提供习惯'
                 }, status=400)
-                
-            if not selected_device_names:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': '请至少选择一个设备'
-                }, status=400)
-
-            # 检查习惯是否已存在
-            if Habits.objects.filter(username=username, habit_name=habit_name).exists():
+            
+            if Habits.objects.filter(habitname=habitname).exists():
                 return JsonResponse({
                     'status': 'error',
                     'message': '该习惯名称已存在'
                 }, status=400)
-
-            # 创建新习惯
-            habit = Habits.objects.create(
+            
+            Habits.objects.create(
                 username=username,
-                habit_name=habit_name
+                habitname=habitname,
+                devicename=devicename,
+                devicetype=devicetype,
+                status=1,
+                brightness=brightness,
+                temperature=temperature,
+                mode=mode
             )
 
-            # 添加设备到习惯
-            added_devices = []
-            for device_name in selected_device_names:
-                try:
-                    device = Device.objects.get(Device_name=device_name)
-                    habit.favorite_devices.add(device)
-                    added_devices.append({
-                        'id': device.Device_id,
-                        'name': device.Device_name,
-                        'type': device.Device_type
-                    })
-                    
-                    Log.objects.create(
-                        username=username,
-                        devicename=device.Device_name,
-                        devicetype=device.Device_type,
-                        operation=f"添加到习惯'{habit_name}'"
-                    )
-                except Device.DoesNotExist:
-                    continue
-
+            Log.objects.create(
+                username=username,
+                devicename=devicename,
+                devicetype=devicetype,
+                operation=f"create habit {habitname} on",
+            )
+            
             return JsonResponse({
-                'status': 'success',
-                'message': '习惯创建成功',
-                'habit': {
-                    'name': habit.habit_name,
-                    'device_count': len(added_devices)
-                },
-                'added_devices': added_devices
+                'usename': username,
+                'devicename': devicename,
+                'devicetype': devicetype,
+                'habitname': habitname,
+                'status': 1,
+                'brightness': brightness,
+                'temperature': temperature,
+                'mode': mode
             })
-
-        # GET请求返回所有可用设备
-        devices = Device.objects.all()
-        device_list = []
-        
-        for device in devices:
-            device_list.append({
-                'id': device.Device_id,
-                'name': device.Device_name,
-                'type': device.Device_type,
-                'status': device.get_status() if hasattr(device, 'get_status') else None
-            })
-        
-        return JsonResponse({
-            'status': 'success',
-            'devices': device_list,
-            'username': username
-        })
 
     except json.JSONDecodeError:
         return JsonResponse({
@@ -1481,72 +1425,109 @@ def delete_habit(request):
         # 处理POST请求（删除习惯）
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
-            habit_name = data.get('habit_name')
+            habitname = data.get('habitname')
             username = data.get('username')
             permission = User.objects.get(username=username).get_permission()
 
+            if not username:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请先登录'
+                }, status=400)
+            
             if permission < 1:
                 return JsonResponse({
                     'status': 'error',
-                    'message': '您没有权限删除习惯',
-                    'redirect': '/home/habits/'
-                }, status=403)
-
-            if not habit_name:
+                    'message': '您无权限执行此操作'
+                }, status=400)
+            
+            if not habitname:
                 return JsonResponse({
                     'status': 'error',
-                    'message': '请提供要删除的习惯名称'
+                    'message': '请输入习惯名称'
                 }, status=400)
 
-            try:
-                habit = Habits.objects.get(username=username, habit_name=habit_name)
-                
-                # 记录删除日志
-                for device in habit.favorite_devices.all():
-                    Log.objects.create(
-                        username=username,
-                        devicename=device.Device_name,
-                        devicetype=device.Device_type,
-                        operation=f"从习惯'{habit_name}'中移除"
-                    )
-                
-                # 删除习惯
-                habit.delete()
-                
-                # 获取剩余习惯
-                remaining_habits = list(Habits.objects.filter(username=username).values(
-                    'habit_name'
-                ))
-                
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f"习惯'{habit_name}'已删除",
-                    'remaining_habits': remaining_habits
-                })
-                
-            except Habits.DoesNotExist:
+            if not Habits.objects.filter(habitname=habitname).exists():
                 return JsonResponse({
                     'status': 'error',
-                    'message': '找不到指定的习惯'
-                }, status=404)
+                    'message': '此习惯不存在'
+                }, status=400)
+            
+            deletehabit = Habits.objects.get(habitname=habitname)
+            deletehabit.delete()
 
-        # GET请求返回用户所有习惯
-        habits = Habits.objects.filter(username=username)
-        habits_data = []
-        
-        for habit in habits:
-            habits_data.append({
-                'id': habit.id,
-                'name': habit.habit_name,
-                'devices': habit.favorite_devices,
-                'device_count': habit.favorite_devices.count(),
+            return JsonResponse({
+                'status': 'success',
+                'message': '删除成功'
             })
-        
+
+    except json.JSONDecodeError:
         return JsonResponse({
-            'status': 'success',
-            'habits_data': habits_data,
-            'username': username
-        })
+            'status': 'error',
+            'message': '无效的JSON数据'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'删除习惯失败: {str(e)}'
+        }, status=500)
+
+
+def exec_habit(request):
+    try:
+        # 处理POST请求（删除习惯）
+        if request.method == 'POST':
+            data = json.loads(request.body) if request.body else {}
+            habitname = data.get('habitname')
+            username = data.get('username')
+            permission = User.objects.get(username=username).get_permission()
+
+            if not username:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请先登录'
+                }, status=400)
+            
+            if permission < 1:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '您无权限执行此操作'
+                }, status=400)
+            
+            if not habitname:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '请输入习惯名称'
+                }, status=400)
+
+            if not Habits.objects.filter(habitname=habitname).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': '此习惯不存在'
+                }, status=400)
+            
+            exechabit = Habits.objects.get(habitname=habitname)
+
+            actions = []
+            actions.append({'status': 1})
+            if exechabit.devicename == 'Light':
+                actions.append({'brightness': exechabit.brightness})
+            elif exechabit.devicename == 'WashingMachine':
+                actions.append({'mode': exechabit.mode})
+            elif exechabit.devicename == 'Robotvacuum':
+                actions.append({'mode': exechabit.mode})
+            elif exechabit.devicename == 'AirConditioner':
+                actions.append({'mdoe': exechabit.mode})
+                actions.append({'temperature': exechabit.temperature})
+                
+
+            return JsonResponse({
+                'username': username,
+                'habitname': exechabit.habitname,
+                'devicename': exechabit.devicename,
+                'devicetype': exechabit.devicetype,
+                'actions': actions
+            })
 
     except json.JSONDecodeError:
         return JsonResponse({

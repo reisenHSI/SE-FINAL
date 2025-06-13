@@ -265,7 +265,7 @@ class WashingMachine(Device):
 class Robotvacuum(Device):
     mode = models.CharField(max_length=20, default='clean') # sweep为清扫，mop为拖地
     starttime = models.DateTimeField(auto_now_add=True, null=True)
-    sweep_area = models.IntegerField(default=0) # 扫过的区域
+    sweeparea = models.IntegerField(default=0) # 扫过的区域
     electricity = models.IntegerField(default=100) # 剩余电量
 
     def __str__(self):
@@ -281,6 +281,26 @@ class Robotvacuum(Device):
             raise ValueError('无效的清扫模式！')
         self.mode = mode
         self.save()
+
+    #  获取扫地时间
+    def get_starttime(self):
+        return self.starttime
+    
+    def set_starttime(self, starttime):
+        self.starttime = starttime
+        self.save()
+
+    def get_sweeparea(self):
+        return self.sweeparea
+    
+    def set_sweeparea(self, sweeparea):
+        self.sweeparea = sweeparea
+
+    def get_electricity(self):
+        return self.electricity
+    
+    def set_electricity(self, electricity):
+        self.electricity = electricity
 
     # 添加设备
     def add_robotvacuum(self, Device_id, Device_name, Device_status, mode='clean'):
@@ -302,7 +322,7 @@ class Robotvacuum(Device):
 class Habits(models.Model):
     habit_id = models.AutoField(primary_key=True)
     username = models.CharField(max_length=20)
-    habitname = models.CharField(max_length=20)
+    habitname = models.CharField(max_length=20, default=f"habit{habit_id}", unique=True)
     devicename = models.CharField(max_length=20)
     devicetype = models.CharField(max_length=20)
     status = models.IntegerField(default=1)

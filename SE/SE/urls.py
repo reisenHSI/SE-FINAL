@@ -54,4 +54,5 @@ urlpatterns = [
     path('home/habits/', views.habits, name='habits'),
     path('home/habits/add_habit/', views.add_habit, name='add_habit'),
     path('home/habits/delete_habit/', views.delete_habit, name='delete_habit'),
+    path('home/habits/exec_habit/', views.exec_habit, name='exec_habit'),
 ]

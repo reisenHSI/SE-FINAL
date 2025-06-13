@@ -64,7 +64,7 @@ class WashingMachineAdmin(admin.ModelAdmin):
 # 注册 Robotvacuum 模型
 @admin.register(Robotvacuum)
 class RobotvacuumAdmin(admin.ModelAdmin):
-    list_display = ('Device_id', 'Device_name', 'Device_status', 'mode')
+    list_display = ('Device_id', 'Device_name', 'Device_status', 'mode', 'electricity', 'sweeparea')
     search_fields = ('Device_name',)
     list_filter = ('Device_status', 'mode')
     ordering = ('Device_id',)

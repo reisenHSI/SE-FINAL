@@ -624,70 +624,33 @@ robotvacuum:
 
 habits：
 
-## **一键习惯功能**
+## **获取用户所有习惯**
 
-- 请求方式：GET（查询习惯）/ POST（执行习惯）  
+- 请求方式：POST 
 - 请求URL：`/home/habits/`  
 
 ### 请求参数
 
-#### GET请求
-无
-
 #### POST请求（JSON Body）
 | 参数名       | 类型   | 是否必填 | 描述       |
 |--------------|--------|----------|------------|
-| habit_name   | string | 是       | 习惯名称   |
+| username   | string | 是       | 习惯名称   |
 
 ### 返回值
 
 #### 成功响应（200 OK）
-1. GET请求响应（获取用户所有习惯）：
+POST请求响应：
 ```json
 {
-    "status": "success",
-    "habits": [
+    "username": "username",
+    "result": [
         {
-            "id": 1,
-            "name": "回家模式",
-            "created_at": "2023-10-15 08:30:00",
-            "devices": [
-                {
-                    "id": 1,
-                    "name": "客厅灯",
-                    "type": "Light",
-                    "status": "1"
-                },
-                {
-                    "id": 2,
-                    "name": "主卧空调",
-                    "type": "AirConditioner",
-                    "status": "1"
-                }
-            ]
-        }
-    ],
-    "username": "john"
-}
-```
-2. POST请求响应（执行习惯）：
-```json
-{
-    "status": "success",
-    "message": "习惯'回家模式'已执行",
-    # 打开的设备
-    "activated_devices": [
-        {
-            "name": "客厅灯",
-            "type": "Light",
-            "status": 1
-        },
-        {
-            "name": "主卧空调",
-            "type": "AirConditioner",
-            "status": 1
+            "habitname": "睡觉模式",
+            "devicename": "空调1",
+            "devicetype": "AirConditioner"
         }
     ]
+
 }
 ```
 #### 错误码：400、401、404、500
@@ -697,66 +660,41 @@ add_habit：
 
 ## **添加新习惯**
 
-- 请求方式：GET（获取可用设备）/ POST（创建习惯）  
+- 请求方式：POST（创建习惯）  
 - 请求URL：`/home/habits/add_habit/`  
 
 ### 请求参数
 
-#### GET请求
-无
-
 #### POST请求（JSON Body）
 | 参数名            | 类型   | 是否必填 | 描述                     |
 |-------------------|--------|----------|--------------------------|
-| habit_name        | string | 是       | 新习惯名称               |
-| device_names      | array  | 是       | 要包含的设备名称数组      |
+| username        | string | 是       | 用户名               |
+| devicename      | string  | 是       | 设备名      |
+| devicetype      | string  | 是       | 设备类型      |
+| habitename      | string  | 否       | 习惯名      |
+| brightness      | int      | 否       | 灯光亮度      |
+| temperature      | int      | 否       | 空调温度      |
+| mode             | string      | 否       | 空调、洗衣机、扫地机模式      |
 
 ### 返回值
 
 #### 成功响应（200 OK）
-1. GET请求响应（获取所有设备）：
+ POST请求响应（创建新习惯）：
 ```json
 {
-    "status": "success",
-    "devices": [
-        {
-            "id": 1,
-            "name": "客厅灯",
-            "type": "Light",
-            "status": 1
-        },
-        {
-            "id": 2,
-            "name": "主卧空调",
-            "type": "AirConditioner",
-            "status": 1
-        }
-    ],
-    "username": "john"
+    "username": "username",
+    "devicename": "空调",
+    "devicetype": "AirConditioner",
+    "habitname": "睡觉模式",
+    "status": 1,
+    "brightness": "None",
+    "temperature": 25,
+    "mode": "cool" 
 }
-```
-2. POST请求响应（创建新习惯）：
-```json
-{
-    "status": "success",
-    "message": "习惯创建成功",
-    "habit": {
-        "name": "回家模式",
-        "device_count": 2
-    },
-    "added_devices": [
-        {
-            "id": 1,
-            "name": "客厅灯",
-            "type": "Light"
-        },
-        {
-            "id": 2,
-            "name": "主卧空调",
-            "type": "AirConditioner"
-        }
-    ]
-}
+    # mode的选项有：（考虑根据devicetype给出选项？？）
+        洗衣机：['standard', 'quick', 'delicate', 'heavy', 'wool']
+        扫地机：['auto', 'spot', 'edge', 'single_room', 'mop']
+        空调：['cool', 'heat', 'auto', 'dry', 'fan']
 ```
 #### 错误码：400、401、404、500
 
@@ -765,63 +703,58 @@ delete_habit：
 
 ## **删除习惯**
 
-- 请求方式：GET（获取习惯列表）/ POST（删除习惯）  
-- 请求URL：`/home/habits/delete/`  
+- 请求方式：POST（删除习惯）  
+- 请求URL：`/home/habits/delete_habit/`  
 
 ### 请求参数
-
-#### GET请求
-无
 
 #### POST请求（JSON Body）
 | 参数名       | 类型   | 是否必填 | 描述       |
 |--------------|--------|----------|------------|
-| habit_name   | string | 是       | 要删除的习惯名称 |
+| habitname   | string | 是       | 要删除的习惯名称 |
 
 ### 返回值
 
 #### 成功响应（200 OK）
-1. GET请求响应（获取所有习惯）：
+POST请求响应（删除习惯）：
 ```json
 {
     "status": "success",
-    "habits_data": [
-        {
-            "id": 1,
-            "name": "回家模式",
-            "devices": [
-                {
-                    "Device_id": 1,
-                    "Device_name": "客厅灯",
-                    "Device_type": "Light"
-                },
-                {
-                    "Device_id": 2,
-                    "Device_name": "主卧空调",
-                    "Device_type": "AirConditioner"
-                }
-            ],
-            "device_count": 2
-        }
-    ],
-    "username": "john"
+    "message": "习惯已删除",
 }
-```
-2. POST请求响应（删除习惯）：
+
+
+
+exec_habit：
+
+## **执行习惯**
+
+- 请求方式：POST（删除习惯）  
+- 请求URL：`/home/habits/delete_habit/` 
+
+### 请求参数
+
+#### POST请求（JSON Body）
+| 参数名       | 类型   | 是否必填 | 描述       |
+|--------------|--------|----------|------------|
+| habitname   | string | 是       | 要删除的习惯名称 |
+
+### 返回值
+
+#### 成功响应（200 OK）
+POST请求响应（删除习惯）：
 ```json
 {
-    "status": "success",
-    "message": "习惯'回家模式'已删除",
-    "remaining_habits": [
-        {
-            "habit_name": "睡眠模式"
-        }
-        {
-            "habit_name": "工作模式"
-        }
-    ]
+    "username": "username",
+    "devicename": "空调",
+    "devicetype": "AirConditioner",
+    "habitname": "睡觉模式",
+    "action": {
+        "status": 1,
+        "mode": "cool",  # 空调、洗衣机、扫地机器人
+        "temperature": 25, # 空调
+    }
 }
-```
 
 
 

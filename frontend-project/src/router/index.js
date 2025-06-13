@@ -13,6 +13,7 @@ import Logs from '@/views/Logs.vue'
 import AddDevice from "@/views/AddDevice.vue";
 import DeleteDevice from "@/views/DeleteDevice.vue";
 import Habits from "@/views/Habits.vue"
+import ChangePassword from "@/views/ChangePassword.vue";
 
 const routes = [
   {
@@ -36,6 +37,7 @@ const routes = [
   { path: '/devices/washing-machine', name: 'WashingMachine', component: WashingMachine },
   { path: '/devices/robotvacuum', name: 'RobotVacuum', component: RobotVacuum },
   { path: '/habits', name: 'Habits', component: Habits },
+  { path: '/changePassword', name: 'changePassword', component: ChangePassword},
 
 
     // 防止路径不匹配导致页面空白

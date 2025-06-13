@@ -47,7 +47,6 @@ pip install django-cors-headers -i https://pypi.tuna.tsinghua.edu.cn/simple
 运行后端项目：
 ```bash
 cd SE
-python manage.py makemigrations app
 python manage.py migrate
 python manage.py runserver
 ```
@@ -59,12 +58,27 @@ python manage.py runserver
 ```
 
 ### 注意事项
-请注意，由于各主机之间的db.sqlite3文件可能不同，在push到仓库时，请勿将该文件上传到仓库中。
+为避免各主机之间的数据库db.sqlite3文件冲突，在项目中设置了git不追踪该文件，已经提供了migrations文件夹。在第一次拉取项目时，请按上面的命令执行，如果失败（未找到SE/db.sqlite3文件），请尝试下面的命令：
+```bash
+cd SE
+python manage.py makemigrations app
+python manage.py migrate
+python manage.py runserver
+```
+运行成功之后，将创建数据库db.sqlite3文件，并启动服务器。
+
+虽然设置了不追踪文件提交，但如果遇到意外情况（pull的时候提示dbsqlite3文件冲突），请勿上传本地文件到仓库中！！！
+
+如果希望创建超级用户，请运行下面的命令：
+```bash
+python manage.py createsuperuser
+```
+并按照提示创建用户，之后可以进入到127.0.0.1:8000/admin访问后台。
 
 
 
 
-待办：
+## 待办：
 1. 添加设备时外键出错 （√ 已修复）
 2. 日志查询的用户名和过滤条件的用户名冲突（√ 已修复）
 3. 添加/删除设备时，返回数据的username可能存在异常（√ 已修复）

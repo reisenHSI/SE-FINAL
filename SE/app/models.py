@@ -223,7 +223,7 @@ class Curtain(Device):
 
 # 洗衣机
 class WashingMachine(Device):
-    starttime = models.DateTimeField(auto_now_add=True) # 时间戳
+    starttime = models.DateTimeField(auto_now_add=True, null=True) # 时间戳
     mode = models.CharField(max_length=20, default='wash') #wash为洗涤，dry为烘干,fastwash为快速洗涤
 
     def __str__(self):
@@ -263,7 +263,9 @@ class WashingMachine(Device):
 
 # 扫地机器人
 class Robotvacuum(Device):
-    mode = models.CharField(max_length=20, default='clean') #sweep为清扫，mop为拖地
+    mode = models.CharField(max_length=20, default='clean') # sweep为清扫，mop为拖地
+    sweep_area = models.IntegerField(default=0) # 扫过的区域
+    electricity = models.IntegerField(default=0) # 剩余电量
 
     def __str__(self):
         return f"RobotVacuum: {self.Device_name}"
@@ -306,3 +308,17 @@ class Habits(models.Model):
         return self.habit_name
     
     
+
+
+# data = {
+#     'username': username,
+#     'devicename': devicename,
+#     'devicetype': devicetype,
+#     'action': {
+#         'status': 1;
+#         'mode': 'cool';
+#         'temperature': 25;
+#         'broghtness': None,
+#         ……
+#     }
+# }

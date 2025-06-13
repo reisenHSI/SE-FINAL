@@ -749,11 +749,16 @@ POST请求响应（删除习惯）：
     "devicename": "空调",
     "devicetype": "AirConditioner",
     "habitname": "睡觉模式",
-    "action": {
+    "action": [{
         "status": 1,
         "mode": "cool",  # 空调、洗衣机、扫地机器人
         "temperature": 25, # 空调
+    },
+    {
+        "status": 1,
+        "brightness": 50, # 灯
     }
+    ]
 }
 
 

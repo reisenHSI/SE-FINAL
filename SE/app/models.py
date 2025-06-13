@@ -322,28 +322,14 @@ class Robotvacuum(Device):
 class Habits(models.Model):
     habit_id = models.AutoField(primary_key=True)
     username = models.CharField(max_length=20)
-    habitname = models.CharField(max_length=20, default=f"habit{habit_id}", unique=True)
+    habitname = models.CharField(max_length=20, unique=True)
     devicename = models.CharField(max_length=20)
     devicetype = models.CharField(max_length=20)
     status = models.IntegerField(default=1)
-    brightness = models.IntegerField(default=None, null=True)
-    temperature = models.IntegerField(default=None, null=True)
-    mode = models.CharField(max_length=20, default=None, null=True) # 洗衣机、空调、扫地机
+    brightness = models.IntegerField(default=100, null=True)
+    temperature = models.IntegerField(default=25, null=True)
+    mode = models.CharField(max_length=20, default='cool', null=True) # 洗衣机、空调、扫地机
 
     def __str__(self):
         return self.habitname
     
-    
-
-# data = {
-#     'username': username,
-#     'devicename': devicename,
-#     'devicetype': devicetype,
-#     'action': {
-#         'status': 1;
-#         'mode': 'cool';
-#         'temperature': 25;
-#         'broghtness': None,
-#         ……
-#     }
-# }

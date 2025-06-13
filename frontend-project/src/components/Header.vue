@@ -7,7 +7,6 @@
       <span class="username">欢迎，{{ username }}</span>
       <button @click="goToLogs">日志查询</button>
       <button @click="goToHabits">个人习惯</button>
-      <button @click="triggerOneKeyOpen">一键开启</button>
       <button class="logout-btn" @click="logout">退出登录</button>
     </div>
   </header>

@@ -24,12 +24,14 @@
       </div>
 
       <button type="submit" class="submit-btn">添加设备</button>
+      <button type="button" class="back-btn" @click="goBack">返回主页</button>
     </form>
   </div>
 </template>
 
+
 <script>
-import {API_BASE_URL} from "../main";
+import { API_BASE_URL } from "../main";
 
 export default {
   name: "AddDevices",
@@ -54,8 +56,6 @@ export default {
       }
 
       try {
-        console.log(localStorage.getItem('username'))
-        // 向后端提交设备信息
         const response = await this.$axios.post(`${API_BASE_URL}home/add_delete/add_device/`, {
           device_name: this.deviceName,
           device_type: this.deviceType,
@@ -64,7 +64,7 @@ export default {
 
         if (response.data.status === 'success') {
           alert('设备添加成功！');
-          this.$router.push({ name: 'Home'});
+          this.$router.push({ name: 'Home' });
         } else {
           alert(`添加失败：${response.data.message}`);
         }
@@ -72,10 +72,14 @@ export default {
         alert('添加设备失败，请稍后重试');
         console.error(error);
       }
+    },
+    goBack() {
+      this.$router.push({ name: 'Home' });
     }
   }
 };
 </script>
+
 
 <style scoped>
 .add-device-container {
@@ -133,6 +137,25 @@ input:focus, select:focus {
 .submit-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.back-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: #cfcfcf;
+  transform: translateY(-2px);
 }
 </style>
 

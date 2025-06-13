@@ -72,10 +72,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { API_BASE_URL } from "../../main";
 
 const route = useRoute()
+const router = useRouter()   // ← 新增
+
 const deviceName = route.query.name
 
 const device = ref({})
@@ -167,25 +169,13 @@ const renameDevice = async () => {
     alert('设备名称不能为空')
   }
 }
+
+// 这里改成组合式 API 的写法，不用 this
 const goBack = () => {
-  this.$router.push('/home')
+  router.push({ name: 'Home' })
 }
+
 onMounted(() => {
   fetchRobotVacuum()
 })
 </script>
-
-<style scoped>
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-.animate-none {
-  animation: none;
-}
-</style>

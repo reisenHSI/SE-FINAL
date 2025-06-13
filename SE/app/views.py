@@ -1294,7 +1294,7 @@ def habits(request):
             try:
                 if not Habits.objects.filter(username=username).exists():
                     return JsonResponse({})
-                myhabits = Habits.objects.get(username=username)
+                myhabits = Habits.objects.filter(username=username)
                 result = []
                 for myhabit in myhabits:
                     result.append({
@@ -1302,7 +1302,7 @@ def habits(request):
                         'devicename': myhabit.devicename,
                         'devicetype': myhabit.devicetype,
                     })
-                
+
                 return JsonResponse({
                     'username': username,
                     'result': result

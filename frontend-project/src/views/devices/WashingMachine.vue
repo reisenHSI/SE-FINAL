@@ -185,7 +185,7 @@ const renameDevice = async () => {
   }
 }
 const goBack = () => {
-  this.$router.push('/home')
+  this.$router.push({ name: 'Home' });
 }
 onMounted(() => {
   fetchWashingMachine()

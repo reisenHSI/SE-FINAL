@@ -51,48 +51,57 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #e6f1ff;
-  padding: 12px 24px;
-  border-bottom: 1px solid #bcd3ef;
+  background: linear-gradient(to right, #4facfe, #00f2fe);
+  padding: 16px 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
 }
 
 .title {
-  font-size: 22px;
-  color: #2a6ecf;
+  font-size: 28px;
+  color: white;
+  font-weight: bold;
   margin: 0;
 }
 
 .right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
 }
 
 .username {
-  margin-right: 10px;
+  margin-right: 16px;
   font-weight: bold;
-  color: #333;
+  color: white;
+  font-size: 16px;
 }
 
 button {
-  padding: 6px 12px;
+  padding: 10px 18px;
   border: none;
-  border-radius: 6px;
-  background-color: #162f60;
-  color: white;
+  border-radius: 12px;
+  background: white;
+  color: #2563eb;
+  font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 button:hover {
-  background-color: #0d3567;
+  background: #2563eb;
+  color: white;
 }
 
 .logout-btn {
-  background-color: #ff5b5b;
+  background: linear-gradient(135deg, #ff6a6a, #ff4e50);
+  color: white;
 }
 
 .logout-btn:hover {
-  background-color: #6a0202;
+  background: linear-gradient(135deg, #d84343, #c62828);
 }
 </style>

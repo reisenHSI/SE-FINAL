@@ -41,39 +41,53 @@ export default {
 
 <style scoped>
 .left-side {
-  width: 180px;
-  background-color: #f0f8ff;
-  padding: 20px;
+  width: 220px;
+  background: linear-gradient(to bottom, #e0f0ff, #ffffff);
+  padding: 24px;
   border-right: 1px solid #d0e3f1;
-  height: 100%;
+  height: 100vh;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
 }
 
 .nav-title {
-  font-size: 18px;
-  color: #2a6ecf;
-  margin-bottom: 16px;
+  font-size: 22px;
+  color: #2563eb;
+  font-weight: bold;
+  margin-bottom: 24px;
+  text-align: center;
 }
 
 .nav-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .nav-list li {
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  border-radius: 6px;
+  padding: 12px 16px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  transition: all 0.3s ease;
+  text-align: center;
 }
 
 .nav-list li:hover {
   background-color: #d7ebff;
+  transform: translateX(4px);
 }
 
 .nav-list li.active {
-  background-color: #2a6ecf;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
   color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transform: translateX(4px);
 }
 </style>

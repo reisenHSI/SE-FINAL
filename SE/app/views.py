@@ -767,7 +767,7 @@ def light(request):
                     username=username,
                     devicename=old_name,
                     devicetype="light",
-                    operation=f"rename"
+                    operation=f"set {new_name} to "
                 )
 
         # GET请求返回设备当前状态
@@ -899,7 +899,7 @@ def airConditioner(request):
                     username=username,
                     devicename=old_name,
                     devicetype="airConditioner",
-                    operation=f"rename"
+                    operation=f"set {new_name} to "
                 )
 
         # GET请求返回设备当前状态
@@ -998,7 +998,7 @@ def curtain(request):
                     username=username,
                     devicename=old_name,
                     devicetype="curtain",
-                    operation=f"rename"
+                    operation=f"set {new_name} to "
                 )
 
 
@@ -1118,7 +1118,7 @@ def washingMachine(request):
                     username=username,
                     devicename=old_name,
                     devicetype="washingMachine",
-                    operation=f"rename"
+                    operation=f"set {new_name} to "
                 )
 
         # GET请求返回设备当前状态
@@ -1236,7 +1236,7 @@ def robotvacuum(request):
                     username=username,
                     devicename=old_name,
                     devicetype="robotvacuum",
-                    operation=f"rename"
+                    operation=f"set {new_name} to "
                 )
 
             # return JsonResponse(response_data)

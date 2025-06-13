@@ -1292,6 +1292,8 @@ def habits(request):
                 }, status=400)
             
             try:
+                if not Habits.objects.filter(username=username).exists():
+                    return JsonResponse({})
                 myhabits = Habits.objects.get(username=username)
                 result = []
                 for myhabit in myhabits:

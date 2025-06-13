@@ -582,8 +582,8 @@ def query_logs(request):
             'logs': log_data, # 日志数据
             'total_count': total_count, # 总记录数
             'filter_options': {
-                'usernames': list(Log.objects.order_by().values_list('username', flat=True).distinct()),
-                'devicenames': list(Log.objects.order_by().values_list('devicename', flat=True).distinct())
+                'username': list(User.objects.order_by().values_list('username', flat=True).distinct()),
+                'devicenames': list(Device.objects.order_by().values_list('Device_name', flat=True).distinct())
             }
         })
         

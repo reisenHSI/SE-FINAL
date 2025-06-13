@@ -39,8 +39,54 @@
           >
             删除习惯
           </button>
+          <button
+            type="button"
+            @click="showAddHabit = true"
+            class="px-6 py-3 bg-blue-500 text-white rounded-full shadow-md hover:bg-blue-600 transition"
+          >
+            新增习惯
+          </button>
         </div>
       </form>
+    </div>
+
+    <!-- 新增习惯弹窗 -->
+    <div
+      v-if="showAddHabit"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+    >
+      <div class="bg-white rounded-2xl p-6 w-full max-w-lg space-y-4">
+        <h2 class="text-2xl font-bold mb-4 text-center">新增习惯</h2>
+
+        <!-- 设备选择 -->
+        <select v-model="selectedDevice" @change="handleDeviceChange" class="w-full p-2 border rounded">
+          <option disabled value="">请选择设备</option>
+          <option
+            v-for="device in allDevices"
+            :key="device.id"
+            :value="device"
+          >
+            {{ device.name }}（{{ device.type_name }}）
+          </option>
+        </select>
+
+        <input v-model="newHabit.habitname" type="text" placeholder="习惯名称" class="w-full p-2 border rounded" />
+        <input v-model="newHabit.brightness" type="number" placeholder="灯光亮度（可选）" class="w-full p-2 border rounded" />
+        <input v-model="newHabit.temperature" type="number" placeholder="空调温度（可选）" class="w-full p-2 border rounded" />
+
+        <!-- 模式选择（根据设备类型） -->
+        <div v-if="availableModes.length > 0">
+          <select v-model="newHabit.mode" class="w-full p-2 border rounded">
+            <option disabled value="">请选择模式</option>
+            <option v-for="mode in availableModes" :key="mode" :value="mode">{{ mode }}</option>
+          </select>
+        </div>
+
+        <div class="flex justify-around mt-4">
+          <button @click="addHabit" class="px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-600">添加</button>
+          <button @click="showAddHabit = false" class="px-4 py-2 bg-gray-500 text-white rounded-full hover:bg-gray-600">取消</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -52,11 +98,29 @@ import { API_BASE_URL } from '../main'
 
 const habits = ref([])
 const selectedHabits = ref([])
+const allDevices = ref([])
 
-// 获取全部习惯列表
+const showAddHabit = ref(false)
+const selectedDevice = ref('')
+const newHabit = ref({
+  devicename: '',
+  devicetype: '',
+  habitname: '',
+  brightness: null,
+  temperature: null,
+  mode: ''
+})
+
+const deviceModes = {
+  AirConditioner: ['cool', 'heat', 'auto', 'dry', 'fan'],
+  Washer: ['standard', 'quick', 'delicate', 'heavy', 'wool'],
+  Sweeper: ['auto', 'spot', 'edge', 'single_room', 'mop']
+}
+
+const availableModes = ref([])
+
 const fetchHabits = async () => {
   try {
-    console.log(localStorage.getItem('username'))
     const response = await axios.post(`${API_BASE_URL}/home/habits/`, {
       username: localStorage.getItem('username')
     })
@@ -67,7 +131,35 @@ const fetchHabits = async () => {
   }
 }
 
-// 应用习惯
+const fetchDevices = async () => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}home/devices/`, { username: localStorage.getItem('username') })
+    if (response.status === 200) {
+      const deviceCategories = response.data.device_categories
+      // 展平成一个设备列表，带上 type 和 type_name
+      allDevices.value = deviceCategories.flatMap(category =>
+        category.devices.map(device => ({
+          ...device,
+          type: category.type,
+          type_name: category.type_name
+        }))
+      )
+    }
+  } catch (error) {
+    console.error('获取设备失败', error)
+    alert('获取设备失败')
+  }
+}
+
+const handleDeviceChange = () => {
+  if (selectedDevice.value) {
+    newHabit.value.devicename = selectedDevice.value.name
+    newHabit.value.devicetype = selectedDevice.value.type
+    // 联动模式
+    availableModes.value = deviceModes[selectedDevice.value.type] || []
+  }
+}
+
 const applyHabits = async () => {
   if (selectedHabits.value.length === 0) {
     alert('请先选择要应用的习惯')
@@ -75,7 +167,7 @@ const applyHabits = async () => {
   }
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/habits/apply/`, {
+    const response = await axios.post(`${API_BASE_URL}/home/habits/`, {
       habits: selectedHabits.value
     })
 
@@ -91,7 +183,6 @@ const applyHabits = async () => {
   }
 }
 
-// 删除习惯
 const deleteHabits = async () => {
   if (selectedHabits.value.length === 0) {
     alert('请先选择要删除的习惯')
@@ -118,9 +209,43 @@ const deleteHabits = async () => {
   }
 }
 
-// 页面加载时获取所有习惯
+const addHabit = async () => {
+  if (!newHabit.value.devicename || !newHabit.value.devicetype) {
+    alert('请先选择设备')
+    return
+  }
+
+  try {
+    console.log(newHabit.value.devicename, newHabit.value.devicetype, newHabit.value.habitname)
+    const response = await axios.post(`${API_BASE_URL}/home/habits/add_habit/`, {
+      username: localStorage.getItem('username'),
+      devicename: newHabit.value.devicename,
+      devicetype: newHabit.value.devicetype,
+      habitname: newHabit.value.habitname,
+      brightness: newHabit.value.brightness,
+      temperature: newHabit.value.temperature,
+      mode: newHabit.value.mode
+    })
+
+    if (response.status === 200) {
+      alert('习惯添加成功')
+      showAddHabit.value = false
+      fetchHabits()
+      newHabit.value = { devicename: '', devicetype: '', habitname: '', brightness: null, temperature: null, mode: '' }
+      selectedDevice.value = ''
+      availableModes.value = []
+    } else {
+      alert('习惯添加失败')
+    }
+  } catch (error) {
+    console.error('添加习惯失败', error)
+    alert('添加习惯失败')
+  }
+}
+
 onMounted(() => {
   fetchHabits()
+  fetchDevices()
 })
 </script>
 

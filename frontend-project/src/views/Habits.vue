@@ -167,7 +167,8 @@ const applyHabits = async () => {
   }
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/habits/`, {
+    const response = await axios.post(`${API_BASE_URL}/home/habits/exec_habit/`, {
+      username: localStorage.getItem('username'),
       habits: selectedHabits.value
     })
 
@@ -190,7 +191,8 @@ const deleteHabits = async () => {
   }
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/habits/delete/`, {
+    const response = await axios.post(`${API_BASE_URL}/home/habits/delete_habit/`, {
+      username: localStorage.getItem('username'),
       habits: selectedHabits.value
     })
 

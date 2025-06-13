@@ -532,11 +532,8 @@ def query_logs(request):
         # 处理筛选条件
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
-            print(111)
             username = data.get('username')
-            print(222)
             permission = User.objects.get(username=username).get_permission()
-            print(333)
 
             if permission != 2:
                 return JsonResponse({

@@ -1427,7 +1427,7 @@ def delete_habit(request):
         # 处理POST请求（删除习惯）
         if request.method == 'POST':
             data = json.loads(request.body) if request.body else {}
-            habitname = data.get('habitname')
+            habitname = data.get('habits')
             username = data.get('username')
             permission = User.objects.get(username=username).get_permission()
 

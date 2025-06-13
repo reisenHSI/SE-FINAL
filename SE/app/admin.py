@@ -55,7 +55,7 @@ class CurtainAdmin(admin.ModelAdmin):
 
 @admin.register(WashingMachine)
 class WashingMachineAdmin(admin.ModelAdmin):
-    list_display = ('Device_id', 'Device_name', 'Device_status', 'mode')
+    list_display = ('Device_id', 'Device_name', 'Device_status', 'mode', 'starttime')
     search_fields = ('Device_name',)
     list_filter = ('Device_status', 'mode')
     ordering = ('Device_id',)
@@ -73,8 +73,8 @@ class RobotvacuumAdmin(admin.ModelAdmin):
 # 注册 Habits 模型
 @admin.register(Habits)
 class HabitsAdmin(admin.ModelAdmin):
-    list_display = ('habit_id', 'username', 'habit_name')
-    search_fields = ('username', 'habit_name')
-    filter_horizontal = ('favorite_devices',)  # 优化多对多字段的显示
+    list_display = ('habit_id', 'username', 'habitname', 'devicename',
+                    'devicetype', 'status', 'mode', 'temperature', 'brightness')
+    search_fields = ('username', 'habitname')
     ordering = ('habit_id',)
     readonly_fields = ('habit_id',)

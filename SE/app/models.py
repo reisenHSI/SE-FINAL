@@ -264,8 +264,9 @@ class WashingMachine(Device):
 # 扫地机器人
 class Robotvacuum(Device):
     mode = models.CharField(max_length=20, default='clean') # sweep为清扫，mop为拖地
+    starttime = models.DateTimeField(auto_now_add=True, null=True)
     sweep_area = models.IntegerField(default=0) # 扫过的区域
-    electricity = models.IntegerField(default=0) # 剩余电量
+    electricity = models.IntegerField(default=100) # 剩余电量
 
     def __str__(self):
         return f"RobotVacuum: {self.Device_name}"
@@ -299,16 +300,20 @@ class Robotvacuum(Device):
 在view.py中实现一键开启和一键关闭逻辑
 """
 class Habits(models.Model):
-    habit_id = models.IntegerField(primary_key=True)
+    habit_id = models.AutoField(primary_key=True)
     username = models.CharField(max_length=20)
-    habit_name = models.CharField(max_length=20)
-    favorite_devices = models.ManyToManyField(Device) # 常用设备列表
+    habitname = models.CharField(max_length=20)
+    devicename = models.CharField(max_length=20)
+    devicetype = models.CharField(max_length=20)
+    status = models.IntegerField(default=1)
+    brightness = models.IntegerField(default=None)
+    temperature = models.IntegerField(default=None)
+    mode = models.CharField(max_length=20, default=None) # 洗衣机、空调、扫地机
 
     def __str__(self):
         return self.habit_name
     
     
-
 
 # data = {
 #     'username': username,

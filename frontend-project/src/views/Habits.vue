@@ -169,7 +169,7 @@ const applyHabits = async () => {
   try {
     const response = await axios.post(`${API_BASE_URL}/home/habits/exec_habit/`, {
       username: localStorage.getItem('username'),
-      habits: selectedHabits.value
+      habitname: selectedHabits.value
     })
 
     if (response.status === 200) {
@@ -191,20 +191,28 @@ const deleteHabits = async () => {
   }
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/habits/delete_habit/`, {
-      username: localStorage.getItem('username'),
-      habits: selectedHabits.value
-    })
+    const username = localStorage.getItem('username')
 
-    if (response.status === 200) {
-      alert('习惯已成功删除')
-      habits.value = habits.value.filter(
-        habit => !selectedHabits.value.includes(habit.habitname)
-      )
-      selectedHabits.value = []
-    } else {
-      alert('删除习惯失败')
+    // 遍历每个选中的习惯，依次请求删除
+    for (const habitName of selectedHabits.value) {
+      // 查找当前习惯对应的 devicename
+      const habit = habits.value.find(h => h.habitname === habitName)
+      if (!habit) continue // 如果找不到习惯，跳过
+      console.log(habit)
+      await axios.post(`${API_BASE_URL}/home/habits/delete_habit/`, {
+        username: localStorage.getItem('username'),
+        habitname: habit.habitname
+      })
     }
+
+    alert('习惯已成功删除')
+
+    // 更新本地列表
+    habits.value = habits.value.filter(
+      habit => !selectedHabits.value.includes(habit.habitname)
+    )
+    selectedHabits.value = []
+
   } catch (error) {
     console.error('删除习惯失败', error)
     alert('删除习惯失败')

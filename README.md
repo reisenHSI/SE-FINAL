@@ -1,78 +1,68 @@
 # SE-FINAL
-后端：
 
-app中存放各种类和函数
+该文档将介绍项目逻辑、运行命令及注意事项。在进行项目之前，请先阅读该文档！！！
 
-管理员： se 密码：123456
-尝试登录前端界面，账号：user1，密码：se123456
+加入仓库后，第一次执行之前，请使用以下命令将项目克隆到本地。
+```bash
+git clone https://github.com/reisenHSI/SE-FINAL.git
+```
 
-model.py大致框架已实现
+## 项目结构
+采用前后端分离进行开发，前端采用vue3框架，后端采用Django框架。运行时请使用两个终端分别运行。
 
-完善了“页面跳转逻辑.png”
+vue3框架：frontend-project
 
-后端：
+Django框架：SE
 
-views.py中每一个函数对应页面跳转的一个方框
+## 前端
 
-所有视图函数（views.py）传入和返回格式均为Json格式
+在运行vue之前，请先下载并安装node.js，官网下载即可。
 
-后端返回的Json数据中绑定了status状态码，表示错误类型
+运行前端项目：
+```bash
+cd frontend-project
+npm install
+npm install -D tailwindcss postcss autoprefixer
+npm run dev
+```
+第一次运行时，请运行上面的所有命令构建项目。之后的运行，可以只执行下面的命令：
+```bash
+cd frontend-project
+npm run dev
+```
 
-完成urls的配置，与页面跳转相对应
+### 注意事项
+如果`tailwind css`组件还不能正常运行，则继续运行下面命令
+```bash
+npx tailwindcss@3.4.17 init -p
+```
 
+## 后端
 
-前端：
-
-建立了对应的vue文件
-
-实现了主页，登录和注册
-
-其他逻辑功能待完善
-
-to do:
-
-# 配置  
-后端: Django  
-前端: Vue  
-
-为了解决跨域问题, 需要下载`django-cors-headers`包:  
+为了解决跨域问题,首先需要下载`django-cors-headers`包, 终端运行: 
 ```bash
 pip install django-cors-headers -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-# 运行:  
-1. 由于后端修改了数据库db.sqlite3，在pull时请保留仓库种的db.sqlite3文件，本地的可以删除
-2. 修改后超级用户的账号和密码保持不变，使用前请先执行migrate
-3. 若上述步骤有问题，可以尝试：
-    ·python manage.py makemigrations app
-    ·python manage.py migrate
-    ·python manage.py createsuperuser(账号密码可以设置为se 和  123456)
-
-运行后端  
+运行后端项目：
 ```bash
-pip install django-cors-headers==3.7.0
 cd SE
-python manage.py makemigrations
+python manage.py makemigrations app
 python manage.py migrate
 python manage.py runserver
-cd ..
 ```
 
-运行前端  
+在第一次运行时，请运行上面的完整命令。后续运行可以只执行：
 ```bash
-cd frontend-project
-npm install
-npm run dev
+cd SE
+python manage.py runserver
 ```
 
-添加`tailwind css`组件
-```bash
-npm install -D tailwindcss postcss autoprefixer
-```
-如果还不能正常运行，则继续运行下面命令
-```bash
-npx tailwindcss@3.4.17 init -p
-```
+### 注意事项
+请注意，由于各主机之间的db.sqlite3文件可能不同，在push到仓库时，请勿将该文件上传到仓库中。
+
+
+
 
 待办：
 1. 添加设备时外键出错 （√ 已修复）

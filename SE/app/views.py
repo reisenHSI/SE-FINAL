@@ -1039,6 +1039,8 @@ def washingMachine(request):
             data = json.loads(request.body) if request.body else {}
             device_name = data.get('device_name')
             username = data.get('username')
+            print(username)
+            print(device_name)
 
         if not device_name:
             return JsonResponse({
@@ -1047,8 +1049,12 @@ def washingMachine(request):
             }, status=400)
 
         # 获取设备对象
+        print(111)
+        print(device_name)
         wm = WashingMachine.objects.get(Device_name=device_name)
+        print(222)
         permission = User.objects.get(username=username).get_permission()
+        print(333)
 
         # 处理POST请求（设备控制）
         if request.method == 'POST':

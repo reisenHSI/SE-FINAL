@@ -8,7 +8,7 @@
     <div class="filter-section">
       <div class="filter-item">
         <label>用户名</label>
-        <select v-model="filters.username">
+        <select v-model="filters.check_username">
           <option value="">全部</option>
           <option v-for="user in filterOptions.usernames" :key="user" :value="user">{{ user }}</option>
         </select>
@@ -68,7 +68,8 @@ export default {
         devicenames: [],
       },
       filters: {
-        username: "",
+        username: localStorage.getItem('username'),
+        check_username: "",
         devicename: "",
         start_time: "",
         end_time: "",
@@ -85,9 +86,10 @@ export default {
       try {
         let response;
         if (isFilter) {
+          console.log(this.filters)
           response = await axios.post(`${API_BASE_URL}home/query_logs/`, this.filters);
         } else {
-          response = await axios.get(`${API_BASE_URL}home/query_logs/`);
+          response = await axios.post(`${API_BASE_URL}home/query_logs/`, {username: localStorage.getItem('username')});
         }
 
         if (response.data.status === "success") {
@@ -104,7 +106,8 @@ export default {
     },
     resetFilters() {
       this.filters = {
-        username: "",
+        username: localStorage.getItem('username'),
+        check_username: "",
         devicename: "",
         start_time: "",
         end_time: "",

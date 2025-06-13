@@ -41,8 +41,12 @@ pip install django-cors-headers -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 # 运行:  
-1. 由于后端修改了数据库db.sqlite3，在pull时请保留仓库种的db.sqlite3文件，本地的可以删除，
+1. 由于后端修改了数据库db.sqlite3，在pull时请保留仓库种的db.sqlite3文件，本地的可以删除
 2. 修改后超级用户的账号和密码保持不变，使用前请先执行migrate
+3. 若上述步骤有问题，可以尝试：
+    ·python manage.py makemigrations app
+    ·python manage.py migrate
+    ·python manage.py createsuperuser(账号密码可以设置为se 和  123456)
 
 运行后端  
 ```bash

@@ -76,7 +76,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { API_BASE_URL } from "../../main";
 
 const route = useRoute()
-const router = useRouter()   // ← 新增
+const router = useRouter()
 
 const deviceName = route.query.name
 
@@ -172,7 +172,7 @@ const renameDevice = async () => {
 
 // 这里改成组合式 API 的写法，不用 this
 const goBack = () => {
-  router.push({ name: 'Home' })
+  router.push({ name: 'Home' });
 }
 
 onMounted(() => {

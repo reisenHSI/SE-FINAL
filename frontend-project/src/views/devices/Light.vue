@@ -91,9 +91,10 @@
 import { API_BASE_URL } from "../../main";
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const deviceName = route.query.name || '默认设备名'
 
 const device = ref({
@@ -187,7 +188,7 @@ const renameDevice = async () => {
   }
 }
 const goBack = () => {
-  this.$router.push({ name: 'Home' });
+  router.push({ name: 'Home' })
 }
 onMounted(() => {
   fetchDeviceInfo()

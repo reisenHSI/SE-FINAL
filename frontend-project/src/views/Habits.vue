@@ -1,22 +1,27 @@
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
-    <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-xl">
-      <h1 class="text-3xl font-bold text-center mb-6">一键开启习惯</h1>
+    <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-3xl">
+      <h1 class="text-3xl font-bold text-center mb-6">全部习惯列表</h1>
 
       <form @submit.prevent="applyHabits" class="space-y-4">
         <ul class="space-y-3">
           <li
-            v-for="habit in habits"
-            :key="habit.habit_id"
+            v-for="(habit, index) in habits"
+            :key="index"
             class="flex items-center space-x-4"
           >
             <input
               type="checkbox"
-              :value="habit.habit_id"
+              :value="habit.habitname"
               v-model="selectedHabits"
               class="w-5 h-5 text-blue-500 rounded focus:ring-blue-400"
             />
-            <span class="text-lg">{{ habit.username }} 的习惯</span>
+            <div class="text-lg">
+              <p><strong>习惯名称：</strong>{{ habit.habitname }}</p>
+              <p><strong>设备名称：</strong>{{ habit.devicename }}</p>
+              <p><strong>设备类型：</strong>{{ habit.devicetype }}</p>
+              <p><strong>所属用户：</strong>{{ habit.username }}</p>
+            </div>
           </li>
         </ul>
 
@@ -48,15 +53,14 @@ import { API_BASE_URL } from '../main'
 const habits = ref([])
 const selectedHabits = ref([])
 
-// 获取习惯列表
+// 获取全部习惯列表
 const fetchHabits = async () => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/habits/`)
-    if (response.data.status === 'success') {
-      habits.value = response.data.user_habits
-    } else {
-      alert(response.data.message)
-    }
+    console.log(localStorage.getItem('username'))
+    const response = await axios.post(`${API_BASE_URL}/home/habits/`, {
+      username: localStorage.getItem('username')
+    })
+    habits.value = response.data.result
   } catch (error) {
     console.error('获取习惯失败', error)
     alert('获取习惯失败')
@@ -71,15 +75,15 @@ const applyHabits = async () => {
   }
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/home/habits/`, {
-      habit_ids: selectedHabits.value
+    const response = await axios.post(`${API_BASE_URL}/home/habits/apply/`, {
+      habits: selectedHabits.value
     })
 
-    if (response.data.status === 'success') {
+    if (response.status === 200) {
       alert('习惯已成功应用')
       selectedHabits.value = []
     } else {
-      alert(response.data.message)
+      alert('应用习惯失败')
     }
   } catch (error) {
     console.error('应用习惯失败', error)
@@ -96,18 +100,17 @@ const deleteHabits = async () => {
 
   try {
     const response = await axios.post(`${API_BASE_URL}/home/habits/delete/`, {
-      habit_ids: selectedHabits.value
+      habits: selectedHabits.value
     })
 
-    if (response.data.status === 'success') {
+    if (response.status === 200) {
       alert('习惯已成功删除')
-      // 前端同步删除
       habits.value = habits.value.filter(
-        habit => !selectedHabits.value.includes(habit.habit_id)
+        habit => !selectedHabits.value.includes(habit.habitname)
       )
       selectedHabits.value = []
     } else {
-      alert(response.data.message)
+      alert('删除习惯失败')
     }
   } catch (error) {
     console.error('删除习惯失败', error)
@@ -115,6 +118,7 @@ const deleteHabits = async () => {
   }
 }
 
+// 页面加载时获取所有习惯
 onMounted(() => {
   fetchHabits()
 })

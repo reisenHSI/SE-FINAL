@@ -24,10 +24,8 @@ export default {
     logout() {
       // 清除 token 等登录信息
       localStorage.removeItem('token')
+      localStorage.removeItem('username')
       this.$router.push('/login')
-    },
-    goHome() {
-      this.$router.push('/home')
     },
     goToLogs() {
       this.$router.push('/logs')

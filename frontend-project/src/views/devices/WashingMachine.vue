@@ -102,7 +102,6 @@ const fetchWashingMachine = async () => {
       device.value = response.data.device
       isRunning.value = response.data.device.status === 1 || response.data.device.status === '1'
       selectedMode.value = response.data.device.mode
-      newDeviceName.value = response.data.device.name // 初始化输入框
     } else {
       alert(response.data.message)
     }

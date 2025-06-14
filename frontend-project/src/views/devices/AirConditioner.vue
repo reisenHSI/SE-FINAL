@@ -9,8 +9,14 @@
         返回
       </button>
     </div>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="text-center text-gray-500 text-xl mt-10">
+      正在加载设备信息...
+    </div>
+
     <!-- 设备信息 -->
-    <div class="text-center mb-6">
+    <div v-else class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
       <p class="text-lg text-gray-700">{{ device.type }}</p>
       <p class="text-lg text-gray-700">当前温度: {{ device.temperature }}°C</p>
@@ -18,7 +24,7 @@
     </div>
 
     <!-- 空调显示区域 -->
-    <div class="relative flex items-center justify-center w-full mb-10" style="height: 50vh;">
+    <div v-if="!loading" class="relative flex items-center justify-center w-full mb-10" style="height: 50vh;">
       <!-- 空调图标 -->
       <div
         :class="[
@@ -37,7 +43,7 @@
     </div>
 
     <!-- 拟真遥控器 -->
-    <div class="bg-gray-800 rounded-3xl p-6 text-white shadow-lg flex flex-col items-center space-y-4">
+    <div v-if="!loading" class="bg-gray-800 rounded-3xl p-6 text-white shadow-lg flex flex-col items-center space-y-4">
       <!-- 开关按钮 -->
       <button
         @click="togglePower"
@@ -79,7 +85,6 @@
       <!-- 重命名输入框（按钮在输入框内部） -->
       <div class="w-full flex flex-col items-center mt-4">
         <label class="text-lg font-semibold mb-2">重命名设备</label>
-
         <div class="relative w-full max-w-md">
           <input
             type="text"
@@ -103,7 +108,7 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
-import { API_BASE_URL } from "../../main";
+import { API_BASE_URL } from '../../main'
 
 const route = useRoute()
 const router = useRouter()
@@ -114,6 +119,8 @@ const STATUS_ON = '1'
 const STATUS_OFF = '0'
 const MIN_TEMP = 16
 const MAX_TEMP = 30
+
+const loading = ref(true)
 
 const device = ref({
   id: null,
@@ -159,13 +166,18 @@ const fetchDeviceInfo = async () => {
       device_name: deviceName
     })
     if (response.data.status === 'success') {
-      device.value = response.data.device
+      const fetchedDevice = response.data.device
+      // 强制转换类型，确保 status 是字符串
+      fetchedDevice.status = String(fetchedDevice.status)
+      device.value = fetchedDevice
     } else {
       alert(response.data.message)
     }
   } catch (error) {
     console.error(error)
     alert('获取设备信息失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -233,7 +245,6 @@ const renameDevice = async () => {
     alert('设备名称不能为空')
     return
   }
-
   try {
     const response = await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
       username: localStorage.getItem('username'),
@@ -242,7 +253,7 @@ const renameDevice = async () => {
     })
     if (response.data.status === 'success') {
       device.value.name = newDeviceName.value
-      router.replace({ query: { name: newDeviceName.value } }) // 同步路由参数
+      router.replace({ query: { name: newDeviceName.value } })
       alert('重命名成功')
       newDeviceName.value = ''
     } else {
@@ -253,9 +264,11 @@ const renameDevice = async () => {
     alert('重命名失败')
   }
 }
+
 const goBack = () => {
-  router.push({ name: 'Home' });
+  router.push({ name: 'Home' })
 }
+
 onMounted(() => {
   fetchDeviceInfo()
 })

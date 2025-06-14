@@ -9,6 +9,12 @@
         返回
       </button>
     </div>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="text-center text-gray-500 text-xl mt-10">
+      正在加载设备信息...
+    </div>
+
     <!-- 设备信息 -->
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
@@ -16,7 +22,7 @@
     </div>
 
     <!-- 窗帘动画 -->
-    <div class="relative w-3/4 h-1/2 overflow-hidden border-4 border-blue-400 rounded-xl bg-white shadow-lg">
+    <div v-if="!loading" class="relative w-3/4 h-1/2 overflow-hidden border-4 border-blue-400 rounded-xl bg-white shadow-lg">
       <div
         class="absolute top-0 left-0 h-full bg-blue-300 transition-all duration-1000"
         :style="{ width: isOpen ? '0%' : '50%' }"
@@ -28,7 +34,7 @@
     </div>
 
     <!-- 控制按钮 -->
-    <div class="flex flex-col items-center space-y-6 mt-8">
+    <div v-if="!loading" class="flex flex-col items-center space-y-6 mt-8">
       <button
         @click="toggleCurtain"
         class="px-6 py-3 bg-blue-500 text-white rounded-full shadow-lg transform transition active:scale-95"
@@ -67,6 +73,7 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 const deviceName = route.query.name || '默认设备名'
+const loading = ref(true)
 
 const device = ref({})
 const isOpen = ref(false)
@@ -74,20 +81,21 @@ const newDeviceName = ref('')
 
 const fetchCurtain = async () => {
   try {
-    console.log(deviceName)
     const response = await axios.post(`${API_BASE_URL}/home/devices/curtain/`, {
       username: localStorage.getItem('username'),
       device_name: deviceName
     })
     if (response.data.status === 'success') {
       device.value = response.data.device
-      isOpen.value = response.data.device.status === '1'
+      isOpen.value = response.data.device.status === 1
     } else {
       alert(response.data.message)
     }
   } catch (error) {
     console.error(error)
     alert('获取设备信息失败')
+  } finally {
+    loading.value = false
   }
 }
 

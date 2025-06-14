@@ -143,7 +143,7 @@ const fetchHabits = async () => {
     }))
   } catch (error) {
     console.error('获取习惯失败', error)
-    alert('获取习惯失败')
+    alert('当前用户暂无习惯')
   }
 }
 

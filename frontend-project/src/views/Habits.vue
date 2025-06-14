@@ -1,5 +1,15 @@
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
+    <!-- 返回按钮 -->
+    <div class="w-full max-w-md px-4 py-2 flex justify-start">
+      <button
+        @click="goBack"
+        class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg shadow-sm"
+      >
+        返回
+      </button>
+    </div>
+
     <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-3xl">
       <h1 class="text-3xl font-bold text-center mb-6">全部习惯列表</h1>
 
@@ -85,6 +95,10 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '../main'
+import {useRoute, useRouter} from "vue-router";
+
+const route = useRoute()
+const router = useRouter()
 
 const habits = ref([])
 const selectedHabits = ref([])
@@ -203,6 +217,7 @@ const applyHabits = async () => {
         await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
           username: localStorage.getItem('username'),
           device_name: habit.devicename,
+          new_status: '1',
           temperature: habit.temperature,
           mode: habit.mode
         })
@@ -210,17 +225,18 @@ const applyHabits = async () => {
         await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
           username: localStorage.getItem('username'),
           device_name: habit.devicename,
+          new_status: '1',
           mode: habit.mode
         })
       } else if (habit.devicetype === 'Robotvacuum') {
         await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, {
           username: localStorage.getItem('username'),
           device_name: habit.devicename,
+          new_status: '1',
           mode: habit.mode
         })
       } else {
         console.warn(`不支持的设备类型: ${habit.devicetype}`)
-        continue
       }
     }
 
@@ -245,9 +261,10 @@ const deleteHabits = async () => {
     for (const habitName of selectedHabits.value) {
       const habit = habits.value.find(h => h.habitname === habitName)
       if (!habit) continue
+      console.log(habit.habitname)
       await axios.post(`${API_BASE_URL}/home/habits/delete_habit/`, {
         username: localStorage.getItem('username'),
-        habitname: habit.habitname
+        habits: habit.habitname
       })
     }
 
@@ -297,7 +314,9 @@ const addHabit = async () => {
     alert('添加习惯失败')
   }
 }
-
+const goBack = () => {
+  router.push({ name: 'Home' })
+}
 onMounted(() => {
   fetchHabits()
   fetchDevices()

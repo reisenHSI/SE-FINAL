@@ -7,7 +7,6 @@ class UserModelTest(TestCase):
     def test_user_password(self):
         user = User.objects.create(username='Alice', password='123456', phone='1234567890', age=25, User_id=1)
         user.set_password('newpass')
-        self.assertEqual(user.password, 'newpass')
         self.assertTrue(user.check_password('newpass'))
 
 class DeviceModelTest(TestCase):

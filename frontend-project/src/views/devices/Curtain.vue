@@ -86,7 +86,6 @@ const fetchCurtain = async () => {
       device_name: deviceName
     })
     if (response.data.status === 'success') {
-      console.log(response.data)
       device.value = response.data.device
       isOpen.value = response.data.device.status === 1
     } else {

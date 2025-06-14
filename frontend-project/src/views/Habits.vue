@@ -30,7 +30,6 @@
               <p><strong>习惯名称：</strong>{{ habit.habitname }}</p>
               <p><strong>设备名称：</strong>{{ habit.devicename }}</p>
               <p><strong>设备类型：</strong>{{ habit.devicetype }}</p>
-              <p><strong>所属用户：</strong>{{ habit.username }}</p>
             </div>
           </li>
         </ul>
@@ -141,6 +140,7 @@ const fetchHabits = async () => {
       temperature: habit.temperature || null,
       mode: habit.mode || ''
     }))
+    console.log('存放的习惯数据：', habits.value)
   } catch (error) {
     console.error('获取习惯失败', error)
     alert('当前用户暂无习惯')
@@ -214,26 +214,29 @@ const applyHabits = async () => {
           new_status: '1'
         })
       } else if (habit.devicetype === 'AirConditioner') {
+        console.log(habit.devicename)
+        console.log(habit.temperature)
+        console.log(habit.mode)
         await axios.post(`${API_BASE_URL}/home/devices/airConditioner/`, {
           username: localStorage.getItem('username'),
           device_name: habit.devicename,
           new_status: '1',
-          temperature: habit.temperature,
-          mode: habit.mode
+          new_temperature: habit.temperature,
+          new_mode: habit.mode
         })
       } else if (habit.devicetype === 'WashingMachine') {
         await axios.post(`${API_BASE_URL}/home/devices/washingMachine/`, {
           username: localStorage.getItem('username'),
           device_name: habit.devicename,
           new_status: '1',
-          mode: habit.mode
+          new_mode: habit.mode
         })
       } else if (habit.devicetype === 'Robotvacuum') {
         await axios.post(`${API_BASE_URL}/home/devices/robotvacuum/`, {
           username: localStorage.getItem('username'),
           device_name: habit.devicename,
           new_status: '1',
-          mode: habit.mode
+          new_mode: habit.mode
         })
       } else {
         console.warn(`不支持的设备类型: ${habit.devicetype}`)

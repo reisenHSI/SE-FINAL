@@ -1072,8 +1072,8 @@ def washingMachine(request):
                 
                 new_status = int(new_status)
                 # 打开时，设置开始时间
-                if new_status == 1:
-                    wm.set_starttime(timezone.now())
+                # if new_status == 1:
+                #     wm.set_starttime(timezone.now())
                 
                 wm.set_status(new_status)
                 Log.objects.create(
@@ -1128,7 +1128,8 @@ def washingMachine(request):
                 'type': wm.Device_type,
                 'status': wm.get_status(),
                 'mode': wm.get_mode(),
-                'starttime':  wm.get_starttime(),
+                # 'starttime':  wm.get_starttime(),
+                'remaining_time': random.randint(0, 45),
                 'valid_modes': ['standard', 'quick', 'delicate', 'heavy', 'wool'],
             }
         })
@@ -1301,6 +1302,10 @@ def habits(request):
                         'habitname': myhabit.habitname,
                         'devicename': myhabit.devicename,
                         'devicetype': myhabit.devicetype,
+                        'status': myhabit.status,
+                        'brightness': myhabit.brightness,
+                        'temperature': myhabit.temperature,
+                        'mode': myhabit.mode,
                     })
 
                 return JsonResponse({

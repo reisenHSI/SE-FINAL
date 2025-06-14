@@ -13,8 +13,8 @@
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold mb-2">{{ device.name }}</h1>
       <p class="text-lg">当前模式: {{ device.mode }}</p>
-      <p class="text-lg" v-if="device.battery !== null">电量: {{ device.battery }}%</p>
-      <p class="text-lg" v-if="device.area_cleaned !== null">已清扫面积: {{ device.area_cleaned }} ㎡</p>
+      <p class="text-lg" v-if="device.electricity !== null">电量: {{ device.electricity }}%</p>
+      <p class="text-lg" v-if="device.sweeparea !== null">已清扫面积: {{ device.sweeparea }} ㎡</p>
     </div>
 
     <!-- 扫地机器人动画 -->
@@ -93,7 +93,9 @@ const fetchRobotVacuum = async () => {
       device_name: deviceName
     })
     if (response.data.status === 'success') {
+      console.log(response.data)
       device.value = response.data.device
+      console.log(device.value)
       isRunning.value = response.data.device.status === 1
       selectedMode.value = response.data.device.mode
     } else {
